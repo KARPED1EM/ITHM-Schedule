@@ -1,0 +1,7 @@
+[
+    { "name": "第一节课", "start": "09:50", "end": "10:50", "kind": "class", "period": "morning" },
+    { "name": "第二节课", "start": "11:00", "end": "11:50", "kind": "class", "period": "morning" },
+    { "name": "第三节课", "start": "14:25", "end": "15:20", "kind": "class", "period": "afternoon" },
+    { "name": "第四节课", "start": "15:30", "end": "16:20", "kind": "class", "period": "afternoon" },
+    { "name": "第五节课", "start": "16:30", "end": "17:30", "kind": "class", "period": "afternoon" }
+]

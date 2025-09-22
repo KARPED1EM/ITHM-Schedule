@@ -1,0 +1,15 @@
+[
+    { "name": "早读", "start": "08:40", "end": "08:55", "kind": "activity", "period": "morning" },
+    { "name": "第一节课", "start": "09:00", "end": "09:50", "kind": "class", "period": "morning" },
+    { "name": "第二节课", "start": "10:00", "end": "10:50", "kind": "class", "period": "morning" },
+    { "name": "第三节课", "start": "11:00", "end": "12:00", "kind": "class", "period": "morning" },
+    { "name": "演讲", "start": "14:10", "end": "14:25", "kind": "activity", "period": "afternoon" },
+    { "name": "第四节课", "start": "14:30", "end": "15:20", "kind": "class", "period": "afternoon" },
+    { "name": "第五节课", "start": "15:30", "end": "16:20", "kind": "class", "period": "afternoon" },
+    { "name": "第六节课", "start": "16:30", "end": "17:30", "kind": "class", "period": "afternoon" },
+    { "name": "晚自习（第一节）", "start": "18:30", "end": "19:20", "kind": "self", "period": "evening" },
+    { "name": "晚自习（第二节）", "start": "19:30", "end": "20:20", "kind": "self", "period": "evening" },
+    { "name": "晚自习（第三节）", "start": "20:30", "end": "21:30", "kind": "self", "period": "evening" },
+    { "name": "打扫卫生", "start": "21:30", "end": "22:00", "kind": "duty", "period": "evening" },
+    { "name": "离校", "start": "22:00", "end": "22:15", "kind": "leave", "period": "evening" }
+]
