@@ -27,11 +27,15 @@ The calendar file maps dates (YYYY-MM-DD format) to schedule types. Each date ca
 ```
 
 **Rest Day** - No schedule for the day:
+
+You can either explicitly mark a day as rest:
 ```json
 {
   "2025-10-14": { "type": "rest" }
 }
 ```
+
+Or simply omit the date from the calendar (both approaches result in no schedule). The difference: an explicit `"type": "rest"` will display a "Rest" label on the calendar, while an omitted date shows no label.
 
 **Special Day** - Custom event or arrangement:
 
@@ -56,7 +60,7 @@ Or with a detailed timetable file reference:
 }
 ```
 
-When the `schedule` field is provided, it should point to a JSON file (without extension) in the `data/special-schedule/` directory.
+When the `schedule` field is provided, specify the filename **without the `.json` extension** (the application automatically adds it). The file should be placed in the `data/special-schedule/` directory.
 
 ### 2. Normal Schedule Files (`data/schedule/*.json`)
 
