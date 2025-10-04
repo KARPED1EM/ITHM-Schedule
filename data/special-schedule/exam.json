@@ -1,0 +1,9 @@
+[
+    { "name": "考前准备", "start": "08:00", "end": "08:30", "kind": "activity", "period": "morning" },
+    { "name": "综合考试（上半场）", "start": "08:40", "end": "10:10", "kind": "class", "period": "morning" },
+    { "name": "综合考试（下半场）", "start": "10:30", "end": "12:00", "kind": "class", "period": "morning" },
+    { "name": "午餐与休息", "start": "12:00", "end": "13:30", "kind": "activity", "period": "afternoon" },
+    { "name": "技能测评", "start": "13:40", "end": "15:10", "kind": "activity", "period": "afternoon" },
+    { "name": "总结与讲评", "start": "15:30", "end": "16:30", "kind": "activity", "period": "afternoon" },
+    { "name": "离校安排", "start": "16:30", "end": "17:00", "kind": "leave", "period": "afternoon" }
+]
