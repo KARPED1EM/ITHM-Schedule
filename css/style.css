@@ -15,6 +15,7 @@
     --divider: #2a2f40;
     --entry: #4f7dff;
     --advanced: #a855f7;
+    --data-stats: #14b8a6;
     --self-study: #f59e0b;
     --special: #ec4899;
 }
@@ -343,6 +344,7 @@ body {
 }
 .calendar-date.entry { background: linear-gradient(135deg, #5a84ff 0%, #4f7dff 100%); color: #fff; border-color: transparent; }
 .calendar-date.advanced { background: linear-gradient(135deg, #b466f7 0%, #a855f7 100%); color: #fff; border-color: transparent; }
+.calendar-date.data-stats { background: linear-gradient(135deg, #17c9b4 0%, #14b8a6 100%); color: #fff; border-color: transparent; }
 .calendar-date.selfstudy { background: linear-gradient(135deg, #f7ad1a 0%, #f59e0b 100%); color: #fff; border-color: transparent; }
 .calendar-date.special { background: linear-gradient(135deg, #f05ba3 0%, #ec4899 100%); color: #fff; border-color: transparent; }
 .calendar-date.past { opacity: 0.5; }
@@ -373,6 +375,7 @@ body {
 }
 .schedule-option.entry { border-left: 4px solid var(--entry); }
 .schedule-option.advanced { border-left: 4px solid var(--advanced); }
+.schedule-option.data-stats { border-left: 4px solid var(--data-stats); }
 .schedule-option.self-study { border-left: 4px solid var(--self-study); }
 .modal-actions {
     display: flex;
