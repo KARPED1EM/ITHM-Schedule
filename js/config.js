@@ -20,6 +20,7 @@ window.SCHEDULE_CONFIG = {
         default: { name: '今日课程', emoji: '📅' },
         entry: { name: '入门课', emoji: '📅' },
         advanced: { name: '进阶课', emoji: '🚀' },
+        'data-stats': { name: '数据与统计', emoji: '📊' },
         'self-study': { name: '自习日', emoji: '📚' },
         special: { name: '特殊安排', emoji: '⭐' }
     },
@@ -49,7 +50,7 @@ window.SCHEDULE_CONFIG = {
         daysBefore: 15,
         daysAfter: 15,
         labels: { today: '今日', rest: '休息' },
-        typeLabels: { entry: '入门', advanced: '进阶', 'self-study': '自习', special: '特殊' }
+        typeLabels: { entry: '入门', advanced: '进阶', 'data-stats': '数据', 'self-study': '自习', special: '特殊' }
     },
     timeline: {
         gapLabel: '休息'
@@ -144,6 +145,6 @@ window.SCHEDULE_CONFIG = {
     switcher: {
         buttonDefault: '切换课表',
         buttonPreview: '退出预览',
-        types: ['entry', 'advanced', 'self-study']
+        types: ['entry', 'advanced', 'data-stats', 'self-study']
     }
 };
