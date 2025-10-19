@@ -126,7 +126,7 @@ window.SCHEDULE_CONFIG = {
         specialErrorPreviewSuffix: '」的日程，请以通知为准。'
     },
     modal: {
-        title: '选择课表类型',
+        title: '纠正今日课表（仅覆盖今日）',
         restore: '恢复默认',
         cancel: '取消',
         specialNoticePrefix: '提示：今天是「',
