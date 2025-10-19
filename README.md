@@ -1,24 +1,50 @@
-# ITHM Schedule
+<div align="center">
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/KARPED1EM/ITHM-Schedule)
+  <img width="140" src="favicon.svg" alt="ITHM Schedule icon">
 
-A zero-backend timetable viewer with a live timeline, countdown card, and interactive calendar. It ships with the ITHeiMa curriculum, but every screen is driven by JSON so you can swap in your own plan quickly.
+  </br>
 
-## Highlights
-- Live rail and status card that tick every second, including a 100% rail fill once the day is done
-- Calendar preview plus a manual schedule switcher for quick what-if checks
-- Browser-side persistence for timezone (UTC offsets) and 12/24 hour display
-- Pure static assets - drop the folder on any static host or open `index.html`
+  <h1>🕒 ITHM Schedule</h1>
+  <p><i>A zero-backend timetable viewer with a live timeline, countdown, and interactive calendar — fully driven by JSON.</i></p>
 
-## Quick Start
-1. Serve the directory with any static server (`npx serve .`) or open `index.html` directly.
-2. Edit the JSON files under `data/` to match your timetable; sample data is included.
+  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/KARPED1EM/ITHM-Schedule)
 
-## Data Files at a Glance
-- `data/calendar.json` - map `YYYY-MM-DD` to a schedule `type`, `"rest"`, or `"special"`. Omit a date to treat it as rest without showing a badge.
-- `data/schedule/*.json` - arrays of blocks with `name`, `kind`, `period`, `start`, `end`. Used by normal schedule types (`entry`, `advanced`, `self-study`, ...).
-- `data/special-schedule/*.json` - optional detailed timetables for `"special"` days; reference them from the calendar via the `schedule` or `scheduleKey` field (filename without `.json`).
-- `js/config.js` - tweak labels, emoji, manual switcher options, and file aliases without touching the core logic.
+</div>
+
+---
+
+## ✨ Features
+
+- ⏳ **Live rail & countdown** — timeline updates every second, hitting 100% fill when the day ends.  
+- 📅 **Interactive calendar** — preview schedules and test “what-if” scenarios.  
+- 🕓 **Timezone & clock options** — browser-side persistence for UTC offsets and 12/24-hour formats.  
+- 🪶 **Zero backend** — just static assets. Works anywhere you can serve `index.html`.
+
+---
+
+## 🚀 Quick Start
+
+1. Serve the project locally:
+```bash
+   npx serve .
+```
+
+Or just open `index.html` directly in your browser.
+
+2. Edit JSON files under `data/` to match your own schedule. Sample data is included out of the box.
+
+---
+
+## 🗂️ Data Structure
+
+| File                           | Purpose                                                           |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `data/calendar.json`           | Maps `YYYY-MM-DD` → `type` (`"entry"`, `"rest"`, `"special"`...). |
+| `data/schedule/*.json`         | Defines daily blocks (normal schedule types).                     |
+| `data/special-schedule/*.json` | Custom timetables for `"special"` days.                           |
+| `js/config.js`                 | UI labels, emoji, manual switcher, file aliases.                  |
+
+### 📝 Example — `calendar.json`
 
 ```jsonc
 {
@@ -28,13 +54,30 @@ A zero-backend timetable viewer with a live timeline, countdown card, and intera
 }
 ```
 
-## Settings & Persistence
-Open the gear button next to GitHub to pick a timezone (`UTC+/-hh[:mm]`, `GMT+/-hh`, etc.) and choose 12 h or 24 h clocks. Changes are written to `localStorage` only when you hit **Save**, so you can experiment freely before committing.
+---
 
-Timezone adjustments are applied on top of the real UTC clock, so every component (timeline, countdowns, calendar, greetings) stays in sync regardless of the browser's locale.
+## 🛠️ Settings & Persistence
 
-## Deployment
-- Static: upload the folder to any CDN (GitHub Pages, Netlify, Cloudflare Pages, etc.).
-- Vercel: use the one-click button above; no build step is required.
+Click the ⚙️ icon to:
 
-The app fetches JSON with `fetch()`, so host it over HTTP(S) rather than the `file://` protocol if you want dynamic updates. JSON changes take effect after a refresh.
+* Pick a timezone (`UTC+/-hh[:mm]`, `GMT+/-hh`, etc.).
+* Switch between 12 h / 24 h display.
+
+Changes save to `localStorage` only after hitting **Save**, so you can play around safely.
+Timezone shifts apply globally — timeline, countdown, calendar, greetings all stay in sync.
+
+---
+
+## 🌐 Deployment
+
+* 🏗️ **Static Hosting:** Drop the folder on any CDN (GitHub Pages, Netlify, Cloudflare Pages...).
+* ▲ **Vercel:** One-click deploy via the button above.
+* 💡 Note: The app fetches JSON with `fetch()`. To enable dynamic updates, host over `http(s)://` instead of `file://`.
+
+---
+
+<div align="center">
+
+  <h3>💬 Built for flexibility — drop in your own timetable and go.</h3>
+
+</div>
