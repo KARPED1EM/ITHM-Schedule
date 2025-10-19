@@ -202,6 +202,62 @@ function resolveResource(base, identifier, extension) {
     return joinPath(base, file);
 }
 
+async function fetchJson(url, options) {
+    const { errorMessage = networkErrorMessage, ...fetchOptions } = options || {};
+    const response = await fetch(url, fetchOptions);
+    if (!response.ok) throw new Error(errorMessage);
+    return response.json();
+}
+
+function requestTimelineRefresh() {
+    timelineNodes = [];
+    hasInitialScroll = false;
+    setTimeout(updateTimeline, 0);
+}
+
+function createCachedJsonLoader({
+    cache,
+    requests,
+    errors,
+    urlResolver,
+    missingMessage,
+    logLabel,
+    onSuccess,
+    defaultShouldUpdate = false
+}) {
+    const label = logLabel || 'resource';
+    return function load(key, shouldUpdate = defaultShouldUpdate) {
+        if (!key) return Promise.resolve(null);
+        if (cache[key]) return Promise.resolve(cache[key]);
+        if (requests[key]) return requests[key];
+
+        const url = urlResolver(key);
+        if (!url) {
+            const error = new Error(missingMessage);
+            if (errors && key) errors[key] = error;
+            return Promise.reject(error);
+        }
+
+        const refreshAfterLoad = Boolean(shouldUpdate);
+        const request = fetchJson(url).then(data => {
+            cache[key] = data;
+            if (errors && key) delete errors[key];
+            if (typeof onSuccess === 'function') onSuccess(key, data);
+            return data;
+        }).catch(error => {
+            if (errors && key) errors[key] = error;
+            console.error(`Failed to load ${label}:`, key, error);
+            throw error;
+        }).finally(() => {
+            if (requests && key) delete requests[key];
+            if (refreshAfterLoad) requestTimelineRefresh();
+        });
+
+        requests[key] = request;
+        return request;
+    };
+}
+
 function setCSSVariable(name, value) {
     if (typeof document === 'undefined' || !document.documentElement) return;
     if (!name || value === undefined || value === null) return;
@@ -772,77 +828,32 @@ function renderErrorState(err) {
 }
 
 async function loadCalendar() {
-    const response = await fetch(calendarUrl);
-    if (!response.ok) throw new Error(networkErrorMessage);
-    calendarData = await response.json();
+    calendarData = await fetchJson(calendarUrl);
 }
 
-function loadSchedule(type, shouldUpdate = false) {
-    if (!type) return Promise.resolve(null);
-    if (scheduleCache[type]) return Promise.resolve(scheduleCache[type]);
-    if (scheduleRequests[type]) return scheduleRequests[type];
-    const url = getScheduleUrl(type);
-    if (!url) {
-        const error = new Error(scheduleErrorSubtitle);
-        scheduleErrors[type] = error;
-        return Promise.reject(error);
-    }
-    const request = fetch(url).then(response => {
-        if (!response.ok) throw new Error(networkErrorMessage);
-        return response.json();
-    }).then(data => {
-        scheduleCache[type] = data;
-        delete scheduleErrors[type];
-        return data;
-    }).catch(error => {
-        scheduleErrors[type] = error;
-        console.error('Failed to load schedule:', type, error);
-        throw error;
-    }).finally(() => {
-        delete scheduleRequests[type];
-        if (shouldUpdate) {
-            timelineNodes = [];
-            hasInitialScroll = false;
-            setTimeout(updateTimeline, 0);
-        }
-    });
-    scheduleRequests[type] = request;
-    return request;
-}
+const loadSchedule = createCachedJsonLoader({
+    cache: scheduleCache,
+    requests: scheduleRequests,
+    errors: scheduleErrors,
+    urlResolver: getScheduleUrl,
+    missingMessage: scheduleErrorSubtitle,
+    logLabel: 'schedule'
+});
 
-function loadSpecialSchedule(key, shouldUpdate = true) {
-    if (!key) return Promise.resolve(null);
-    if (specialScheduleCache[key]) return Promise.resolve(specialScheduleCache[key]);
-    if (specialScheduleRequests[key]) return specialScheduleRequests[key];
-    const url = getSpecialScheduleUrl(key);
-    if (!url) {
-        const error = new Error(specialErrorSubtitle);
-        specialScheduleErrors[key] = error;
-        return Promise.reject(error);
-    }
-    const request = fetch(url).then(response => {
-        if (!response.ok) throw new Error(networkErrorMessage);
-        return response.json();
-    }).then(data => {
-        specialScheduleCache[key] = data;
-        delete specialScheduleErrors[key];
-        if (specialToday && specialToday.scheduleKey === key) specialToday.scheduleData = data;
-        return data;
-    }).catch(error => {
-        specialScheduleErrors[key] = error;
-        console.error('Failed to load special schedule:', key, error);
-        throw error;
-    }).finally(() => {
-        delete specialScheduleRequests[key];
-        if (shouldUpdate) {
-            timelineNodes = [];
-            hasInitialScroll = false;
-            setTimeout(updateTimeline, 0);
+const loadSpecialSchedule = createCachedJsonLoader({
+    cache: specialScheduleCache,
+    requests: specialScheduleRequests,
+    errors: specialScheduleErrors,
+    urlResolver: getSpecialScheduleUrl,
+    missingMessage: specialErrorSubtitle,
+    logLabel: 'special schedule',
+    defaultShouldUpdate: true,
+    onSuccess: (key, data) => {
+        if (specialToday && specialToday.scheduleKey === key) {
+            specialToday.scheduleData = data;
         }
-    });
-    specialScheduleRequests[key] = request;
-    return request;
-}
+    }
+});
 
 function determineCurrentSchedule() {
     const today = new Date();
