@@ -20,6 +20,10 @@
     --calendar-today-glow: rgba(255, 79, 113, 0.28);
     --calendar-today-number-shadow: rgba(255, 79, 113, 0.45);
     --calendar-today-subtext-shadow: rgba(255, 79, 113, 0.35);
+    --calendar-preview-text: var(--accent);
+    --calendar-preview-outline: rgba(255, 79, 113, 0.45);
+    --calendar-preview-ring: rgba(255, 79, 113, 0.12);
+    --calendar-preview-shadow: rgba(255, 79, 113, 0.22);
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -329,6 +333,21 @@ body {
     cursor: pointer; position: relative; border: 1px solid var(--calendar-date-border, rgba(255,255,255,0.05)); transform-origin: center;
 }
 .calendar-date:hover { box-shadow: 0 6px 16px rgba(0,0,0,.25); transform: scale(1.05); }
+.calendar-date.preview {
+    color: var(--calendar-preview-text, var(--accent));
+    outline: 2px solid var(--calendar-preview-outline, rgba(255, 79, 113, 0.45));
+    outline-offset: 0;
+    box-shadow:
+        0 0 0 4px var(--calendar-preview-ring, rgba(255, 79, 113, 0.12)),
+        0 10px 24px var(--calendar-preview-shadow, rgba(255, 79, 113, 0.22)),
+        0 4px 16px rgba(0, 0, 0, 0.25);
+    transform: translateY(-1px) scale(1.025);
+    z-index: 4;
+}
+.calendar-date.preview .date-weekday,
+.calendar-date.preview .date-type {
+    color: inherit;
+}
 .date-weekday { font-size: 11px; color: var(--calendar-date-subtext, var(--muted)); font-weight: 600; margin-bottom: 4px; }
 .date-number { font-size: 20px; font-weight: 800; line-height: 1; }
 .date-type { font-size: 10px; margin-top: 4px; opacity: 0.9; color: var(--calendar-date-subtext, var(--muted)); }

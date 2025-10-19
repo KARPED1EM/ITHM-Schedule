@@ -1292,6 +1292,18 @@ function exitPreview() {
     updateTimeline();
 }
 
+function updateCalendarPreviewHighlight() {
+    const strip = document.getElementById('calendarStrip');
+    if (!strip) return;
+    const highlighted = strip.querySelectorAll('.calendar-date.preview');
+    highlighted.forEach(el => el.classList.remove('preview'));
+    if (!previewDate) return;
+    const ds = formatDateKey(previewDate);
+    const target = strip.querySelector(`.calendar-date[data-date="${ds}"]`);
+    if (!target || target.classList.contains('today')) return;
+    target.classList.add('preview');
+}
+
 function updateSwitchButton() {
     const btn = document.getElementById('switchScheduleBtn');
     if (!btn) return;
@@ -1304,6 +1316,7 @@ function updateSwitchButton() {
         btn.classList.remove('exit-preview');
         btnText.textContent = switchButtonDefaultText;
     }
+    updateCalendarPreviewHighlight();
 }
 
 function buildCalendar() {
@@ -1417,6 +1430,7 @@ function buildCalendar() {
             }
         }, 100);
     }
+    updateCalendarPreviewHighlight();
 }
 
 async function loadData() {
