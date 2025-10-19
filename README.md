@@ -1,167 +1,40 @@
 # ITHM Schedule
 
-A lightweight, client-side timetable application that displays daily schedules with live timeline tracking, progress indicators, and an interactive calendar.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/KARPED1EM/ITHM-Schedule)
 
-**ITHM** stands for **ITHeiMa** (IT黑马), and the default configuration is based on that institution's curriculum. However, you can easily customize it for your own use by modifying the data files and configuration.
+A zero-backend timetable viewer with a live timeline, countdown card, and interactive calendar. It ships with the ITHeiMa curriculum, but every screen is driven by JSON so you can swap in your own plan quickly.
 
-## Features
+## Highlights
+- Live rail and status card that tick every second, including a 100% rail fill once the day is done
+- Calendar preview plus a manual schedule switcher for quick what-if checks
+- Browser-side persistence for timezone (UTC offsets) and 12/24 hour display
+- Pure static assets - drop the folder on any static host or open `index.html`
 
-- **Live Timeline**: Real-time progress tracking for current activities
-- **Status Card**: Shows current/next activity with countdown timer
-- **Interactive Calendar**: Preview any date by clicking on the calendar
-- **Manual Override**: Temporarily switch between different schedule types
-- **Flexible Configuration**: Support for normal schedules, rest days, and special events
+## Quick Start
+1. Serve the directory with any static server (`npx serve .`) or open `index.html` directly.
+2. Edit the JSON files under `data/` to match your timetable; sample data is included.
 
-## Configuration
+## Data Files at a Glance
+- `data/calendar.json` - map `YYYY-MM-DD` to a schedule `type`, `"rest"`, or `"special"`. Omit a date to treat it as rest without showing a badge.
+- `data/schedule/*.json` - arrays of blocks with `name`, `kind`, `period`, `start`, `end`. Used by normal schedule types (`entry`, `advanced`, `self-study`, ...).
+- `data/special-schedule/*.json` - optional detailed timetables for `"special"` days; reference them from the calendar via the `schedule` or `scheduleKey` field (filename without `.json`).
+- `js/config.js` - tweak labels, emoji, manual switcher options, and file aliases without touching the core logic.
 
-### 1. Calendar Definition (`data/calendar.json`)
-
-The calendar file maps dates (YYYY-MM-DD format) to schedule types. Each date can be:
-
-**Normal Day** - Uses a predefined schedule type:
-```json
+```jsonc
 {
   "2025-10-12": { "type": "entry" },
-  "2025-10-13": { "type": "advanced" }
+  "2025-10-15": { "type": "special", "name": "Campus Festival", "schedule": "festival-day" },
+  "2025-10-16": { "type": "rest" }
 }
 ```
 
-**Rest Day** - No schedule for the day:
+## Settings & Persistence
+Open the gear button next to GitHub to pick a timezone (`UTC+/-hh[:mm]`, `GMT+/-hh`, etc.) and choose 12 h or 24 h clocks. Changes are written to `localStorage` only when you hit **Save**, so you can experiment freely before committing.
 
-You can either explicitly mark a day as rest:
-```json
-{
-  "2025-10-14": { "type": "rest" }
-}
-```
+Timezone adjustments are applied on top of the real UTC clock, so every component (timeline, countdowns, calendar, greetings) stays in sync regardless of the browser's locale.
 
-Or simply omit the date from the calendar (both approaches result in no schedule). The difference: an explicit `"type": "rest"` will display a "Rest" label on the calendar, while an omitted date shows no label.
+## Deployment
+- Static: upload the folder to any CDN (GitHub Pages, Netlify, Cloudflare Pages, etc.).
+- Vercel: use the one-click button above; no build step is required.
 
-**Special Day** - Custom event or arrangement:
-
-Special days can exist with just a name (no detailed timetable):
-```json
-{
-  "2025-10-15": { 
-    "type": "special", 
-    "name": "考试" 
-  }
-}
-```
-
-Or with a detailed timetable file reference:
-```json
-{
-  "2025-10-16": { 
-    "type": "special", 
-    "name": "Holiday", 
-    "schedule": "holiday-2025-10-16" 
-  }
-}
-```
-
-When the `schedule` field is provided, specify the filename **without the `.json` extension** (the application automatically adds it). The file should be placed in the `data/special-schedule/` directory.
-
-### 2. Normal Schedule Files (`data/schedule/*.json`)
-
-Each normal schedule type needs a corresponding JSON file. For example:
-- `entry.json` for `"type": "entry"`
-- `advanced.json` for `"type": "advanced"`
-- `self-study.json` for `"type": "self-study"`
-
-**File Format**: Each schedule file is an array of time blocks:
-
-```json
-[
-  {
-    "name": "Math Class",
-    "kind": "class",
-    "period": "morning",
-    "start": "09:00",
-    "end": "09:45"
-  },
-  {
-    "name": "Break",
-    "kind": "activity",
-    "period": "morning",
-    "start": "09:45",
-    "end": "10:00"
-  }
-]
-```
-
-**Field Descriptions**:
-- `name` (string): Display name for the activity
-- `kind` (string): Activity type - see config.js `kinds` section for available types (e.g., `class`, `self`, `duty`, `leave`, `activity`)
-- `period` (string): Time of day - `morning`, `afternoon`, or `evening`
-- `start` (string): Start time in HH:MM format
-- `end` (string): End time in HH:MM format
-
-### 3. Special Schedule Files (`data/special-schedule/*.json`)
-
-For special days that have a detailed timetable, create a JSON file in the `data/special-schedule/` directory. The file format is identical to normal schedule files (same array structure with time blocks).
-
-**Note**: This directory and files are optional. Special days can simply have a `name` without any timetable file.
-
-### 4. Application Configuration (`js/config.js`)
-
-The `window.SCHEDULE_CONFIG` object in `js/config.js` controls the application behavior and UI text.
-
-**Essential Settings**:
-
-```javascript
-window.SCHEDULE_CONFIG = {
-  // File paths
-  paths: {
-    calendar: 'data/calendar.json',
-    scheduleDir: 'data/schedule',
-    scheduleExtension: '.json',
-    specialScheduleDir: 'data/special-schedule',
-    specialScheduleExtension: '.json'
-  },
-
-  // Schedule type definitions
-  scheduleTypes: {
-    entry: { name: '入门课', emoji: '📅' },
-    advanced: { name: '进阶课', emoji: '🚀' },
-    'self-study': { name: '自习日', emoji: '📚' },
-    special: { name: '特殊安排', emoji: '⭐' }
-  },
-
-  // Manual switcher options (which types can users manually select)
-  switcher: {
-    types: ['entry', 'advanced', 'self-study']
-  }
-}
-```
-
-**Advanced Options**:
-
-- **`scheduleFiles`**: Map schedule types to custom file names if they don't match
-  ```javascript
-  scheduleFiles: {
-    'entry': 'beginner-schedule',  // Uses beginner-schedule.json instead of entry.json
-  }
-  ```
-
-- **`specialScheduleFiles`**: Map special schedule keys to custom file names
-  ```javascript
-  specialScheduleFiles: {
-    'holiday-2025-10-16': 'custom-holiday-schedule'
-  }
-  ```
-
-- **`kinds`**: Define labels for activity types
-- **`periods`**: Customize period labels with HTML/emoji
-- **`calendar`**: Calendar display settings (days before/after, labels)
-- **Other sections**: Various UI text strings and messages
-
-**Tip**: For basic usage, you only need to adjust `paths`, `scheduleTypes`, and `switcher.types`. Everything else controls UI text and can be left as default.
-
-## Limitations
-
-- **Time Zone**: Uses the browser's local time zone; no timezone conversion
-- **Data Updates**: Requires page refresh to load updated JSON files (no auto-refresh)
-- **View Scope**: Displays one day at a time with a limited calendar preview window
-- **Data Validation**: Assumes JSON files are well-formed; minimal error handling for malformed data
-- **Network**: All schedule data must be accessible via HTTP(S); no offline support
+The app fetches JSON with `fetch()`, so host it over HTTP(S) rather than the `file://` protocol if you want dynamic updates. JSON changes take effect after a refresh.
