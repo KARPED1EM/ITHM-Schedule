@@ -48,9 +48,17 @@
         </aside>
         <main class="main-panel">
             <section class="status-section" id="statusSection">
-                <a class="github-fab" href="https://github.com/KARPED1EM/ITHM-Schedule" target="_blank" rel="noopener" aria-label="前往 GitHub 仓库">
-                    <img src="images/github-mark.svg" alt="GitHub" class="github-fab-icon">
-                </a>
+                <div class="fab-group">
+                    <button class="fab-button settings-fab" id="settingsButton" type="button" aria-label="打开设置">
+                        <svg class="settings-fab-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c0 .7.4 1.34 1.03 1.64.2.1.42.16.64.16H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+                        </svg>
+                    </button>
+                    <a class="fab-button github-fab" href="https://github.com/KARPED1EM/ITHM-Schedule" target="_blank" rel="noopener" aria-label="前往 GitHub 仓库">
+                        <img src="images/github-mark.svg" alt="GitHub" class="github-fab-icon">
+                    </a>
+                </div>
                 <div class="status-wrapper" id="statusWrapper">
                     <div class="current-card" id="currentCard">
                         <div class="card-header">
@@ -88,6 +96,30 @@
                 </div>
             </section>
         </main>
+    </div>
+    <div class="modal-overlay" id="settingsModal" aria-hidden="true">
+        <div class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsModalTitle">
+            <h3 id="settingsModalTitle">时间设置</h3>
+            <form class="settings-form" id="settingsForm" novalidate>
+                <div class="settings-field">
+                    <label for="timezoneInput" class="field-label">时区</label>
+                    <input type="text" id="timezoneInput" name="timezone" class="settings-input" placeholder="UTC+8" autocomplete="off">
+                    <p class="field-hint">示例：UTC+8、UTC-2、GMT+9</p>
+                    <p class="field-error" id="timezoneError" role="alert"></p>
+                </div>
+                <div class="settings-field">
+                    <span class="field-label" id="timeFormatLabel">时间制度</span>
+                    <div class="format-options" role="radiogroup" aria-labelledby="timeFormatLabel">
+                        <button type="button" class="format-option" data-format="12" aria-pressed="false">12 小时制</button>
+                        <button type="button" class="format-option" data-format="24" aria-pressed="false">24 小时制</button>
+                    </div>
+                </div>
+            </form>
+            <div class="settings-actions">
+                <button type="button" class="settings-save" id="settingsSaveBtn">保存</button>
+                <button type="button" class="settings-cancel" id="settingsCancelBtn">取消</button>
+            </div>
+        </div>
     </div>
     <div class="modal-overlay" id="switchModal">
         <div class="modal">

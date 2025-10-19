@@ -103,7 +103,7 @@ const weekdayNames = Array.isArray(calendarConfig.weekdays) ? calendarConfig.wee
 
 const timelineGapLabel = timelineConfig.gapLabel || '休息';
 
-const modalTitleText = modalConfig.title || '选择课表类型';
+const modalTitleText = modalConfig.title || '纠正今日课表（仅覆盖今日）';
 const modalRestoreText = modalConfig.restore || '恢复默认';
 const modalCancelText = modalConfig.cancel || '取消';
 const modalSpecialNoticePrefix = modalConfig.specialNoticePrefix || '提示：今天是「';
@@ -127,6 +127,21 @@ const specialScheduleExtension = typeof pathConfig.specialScheduleExtension === 
 
 const scheduleOverrideKey = 'scheduleOverride';
 const scheduleOverrideDateKey = 'scheduleOverrideDate';
+
+const settingsStorageKey = 'scheduleSettings';
+const defaultSettings = Object.freeze({
+    timezone: 'UTC+8',
+    offsetMinutes: 480,
+    timeFormat: '12'
+});
+let userSettings = loadSettings();
+let timezoneOffsetMinutes = userSettings.offsetMinutes;
+let timezoneOffsetMs = timezoneOffsetMinutes * 60000;
+let activeTimeFormat = userSettings.timeFormat === '24' ? '24' : '12';
+const MAX_TIMEZONE_OFFSET_MINUTES = 14 * 60;
+let pendingTimeFormat = activeTimeFormat;
+let isSettingsModalOpen = false;
+let settingsUIInitialized = false;
 
 const scheduleCache = {};
 const scheduleRequests = {};
@@ -155,6 +170,7 @@ let hasInitialScroll = false;
 let isLoading = true;
 let isError = false;
 let previewDate = null;
+let previewDateKey = null;
 let timelineNodes = [];
 let raf = null;
 let lastTick = null;
@@ -283,30 +299,240 @@ function periodLabel(period) {
     return period || '';
 }
 
+function formatTimezoneOffset(offsetMinutes) {
+    if (!Number.isFinite(offsetMinutes)) return 'UTC';
+    if (offsetMinutes === 0) return 'UTC';
+    const sign = offsetMinutes > 0 ? '+' : '-';
+    const absMinutes = Math.abs(offsetMinutes);
+    const hours = Math.floor(absMinutes / 60);
+    const minutes = absMinutes % 60;
+    const minutePart = minutes ? `:${String(minutes).padStart(2, '0')}` : '';
+    return `UTC${sign}${hours}${minutePart}`;
+}
+
+function parseTimezoneValue(value) {
+    if (typeof value !== 'string') return null;
+    let input = value.trim();
+    if (!input) return null;
+    let upper = input.toUpperCase();
+    if (upper === 'UTC' || upper === 'GMT' || upper === 'Z') {
+        return { offsetMinutes: 0, normalized: 'UTC' };
+    }
+    if (upper.startsWith('UTC')) {
+        upper = upper.slice(3).trim();
+    } else if (upper.startsWith('GMT')) {
+        upper = upper.slice(3).trim();
+    }
+    if (upper === 'Z') return { offsetMinutes: 0, normalized: 'UTC' };
+    let sign = 1;
+    if (upper.startsWith('+') || upper.startsWith('-')) {
+        sign = upper[0] === '-' ? -1 : 1;
+        upper = upper.slice(1).trim();
+    }
+    if (!upper) return null;
+    let hours = 0;
+    let minutes = 0;
+    if (upper.includes(':')) {
+        const [h, m] = upper.split(':');
+        hours = Number.parseInt(h, 10);
+        minutes = Number.parseInt(m, 10);
+    } else if (upper.includes('.')) {
+        const [h, fraction] = upper.split('.');
+        hours = Number.parseInt(h, 10);
+        const fractional = Number(`0.${fraction}`);
+        if (!Number.isFinite(fractional)) return null;
+        minutes = Math.round(fractional * 60);
+    } else if (/^\d{3,}$/.test(upper)) {
+        const hPart = upper.slice(0, -2);
+        const mPart = upper.slice(-2);
+        hours = Number.parseInt(hPart, 10);
+        minutes = Number.parseInt(mPart, 10);
+    } else {
+        hours = Number.parseInt(upper, 10);
+    }
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    if (minutes < 0) return null;
+    if (minutes >= 60) {
+        hours += Math.floor(minutes / 60);
+        minutes %= 60;
+    }
+    const totalMinutes = sign * (Math.abs(hours) * 60 + minutes);
+    if (Math.abs(totalMinutes) > MAX_TIMEZONE_OFFSET_MINUTES) return null;
+    return { offsetMinutes: totalMinutes, normalized: formatTimezoneOffset(totalMinutes) };
+}
+
+function loadSettings() {
+    const fallback = {
+        timezone: defaultSettings.timezone,
+        offsetMinutes: defaultSettings.offsetMinutes,
+        timeFormat: defaultSettings.timeFormat
+    };
+    try {
+        if (typeof localStorage === 'undefined') return { ...fallback };
+        const stored = localStorage.getItem(settingsStorageKey);
+        if (!stored) return { ...fallback };
+        const parsed = JSON.parse(stored);
+        let timezoneText = typeof parsed.timezone === 'string' ? parsed.timezone : fallback.timezone;
+        let timezoneInfo = parseTimezoneValue(timezoneText);
+        if (!timezoneInfo && Number.isFinite(parsed.offsetMinutes)) {
+            const offset = Number(parsed.offsetMinutes);
+            if (Math.abs(offset) <= MAX_TIMEZONE_OFFSET_MINUTES) {
+                timezoneInfo = { offsetMinutes: offset, normalized: formatTimezoneOffset(offset) };
+            }
+        }
+        if (!timezoneInfo) timezoneInfo = parseTimezoneValue(fallback.timezone);
+        if (!timezoneInfo) timezoneInfo = { offsetMinutes: fallback.offsetMinutes, normalized: fallback.timezone };
+        const timeFormat = parsed.timeFormat === '24' ? '24' : fallback.timeFormat;
+        return {
+            timezone: timezoneInfo.normalized,
+            offsetMinutes: timezoneInfo.offsetMinutes,
+            timeFormat
+        };
+    } catch (error) {
+        console.warn('Failed to load settings, using defaults.', error);
+        return { ...fallback };
+    }
+}
+
+function persistSettings(settings) {
+    try {
+        if (typeof localStorage === 'undefined') return;
+        localStorage.setItem(settingsStorageKey, JSON.stringify(settings));
+    } catch (error) {
+        console.warn('Unable to persist settings.', error);
+    }
+}
+
+function toTimezoneDate(date) {
+    return new Date(date.getTime() + timezoneOffsetMs);
+}
+
+function fromTimezoneComponents(year, month, day, hour = 0, minute = 0, second = 0, millisecond = 0) {
+    const utcMillis = Date.UTC(year, month, day, hour, minute, second, millisecond) - timezoneOffsetMs;
+    return new Date(utcMillis);
+}
+
+function startOfTimezoneDay(date) {
+    const tz = toTimezoneDate(date);
+    const year = tz.getUTCFullYear();
+    const month = tz.getUTCMonth();
+    const day = tz.getUTCDate();
+    return fromTimezoneComponents(year, month, day);
+}
+
 function formatDateKey(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const tz = toTimezoneDate(date);
+    const year = tz.getUTCFullYear();
+    const month = String(tz.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(tz.getUTCDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
 
-function parseHM(hm) {
-    if (!hm) {
-        const d = new Date();
-        d.setHours(0, 0, 0, 0);
-        return d;
-    }
-    const parts = hm.split(':').map(Number);
-    const d = new Date();
-    d.setHours(parts[0] || 0, parts[1] || 0, 0, 0);
-    return d;
+function parseDateKey(key) {
+    if (typeof key !== 'string') return null;
+    const parts = key.split('-').map(Number);
+    if (parts.length !== 3 || parts.some(num => Number.isNaN(num))) return null;
+    const [year, month, day] = parts;
+    return fromTimezoneComponents(year, month - 1, day);
 }
 
-function normalize(arr) {
+function getTimezoneTimeParts(date) {
+    const tz = toTimezoneDate(date);
+    return {
+        hours: tz.getUTCHours(),
+        minutes: tz.getUTCMinutes(),
+        seconds: tz.getUTCSeconds(),
+        weekday: tz.getUTCDay(),
+        year: tz.getUTCFullYear(),
+        month: tz.getUTCMonth(),
+        date: tz.getUTCDate()
+    };
+}
+
+function format24HourTime(date, includeSeconds = false) {
+    const { hours, minutes, seconds } = getTimezoneTimeParts(date);
+    const h = String(hours).padStart(2, '0');
+    const m = String(minutes).padStart(2, '0');
+    if (includeSeconds) {
+        const s = String(seconds).padStart(2, '0');
+        return `${h}:${m}:${s}`;
+    }
+    return `${h}:${m}`;
+}
+
+function get12HourParts(date) {
+    const { hours, minutes, seconds } = getTimezoneTimeParts(date);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    let hour12 = hours % 12;
+    if (hour12 === 0) hour12 = 12;
+    const minuteStr = String(minutes).padStart(2, '0');
+    const secondStr = String(seconds).padStart(2, '0');
+    return {
+        period,
+        timeNoSeconds: `${hour12}:${minuteStr}`,
+        timeWithSeconds: `${hour12}:${minuteStr}:${secondStr}`,
+        hour: hour12,
+        minute: minutes,
+        second: seconds
+    };
+}
+
+function formatClockDisplay(date) {
+    if (activeTimeFormat === '24') {
+        return format24HourTime(date, true);
+    }
+    const info = get12HourParts(date);
+    return `${info.timeWithSeconds} ${info.period}`;
+}
+
+function formatScheduleTime(date) {
+    if (activeTimeFormat === '24') {
+        return format24HourTime(date);
+    }
+    const info = get12HourParts(date);
+    return `${info.period} ${info.timeNoSeconds}`;
+}
+
+function formatScheduleRange(startDate, endDate, isSameTime = false) {
+    if (activeTimeFormat === '24') {
+        const startText = format24HourTime(startDate);
+        const endText = format24HourTime(endDate);
+        return isSameTime || startText === endText ? startText : `${startText} - ${endText}`;
+    }
+    const startInfo = get12HourParts(startDate);
+    const endInfo = get12HourParts(endDate);
+    const sameTime = isSameTime || (startInfo.period === endInfo.period && startInfo.timeNoSeconds === endInfo.timeNoSeconds);
+    if (sameTime) return `${startInfo.period} ${startInfo.timeNoSeconds}`;
+    if (startInfo.period === endInfo.period) {
+        return `${startInfo.period} ${startInfo.timeNoSeconds} - ${endInfo.timeNoSeconds}`;
+    }
+    return `${startInfo.period} ${startInfo.timeNoSeconds} - ${endInfo.period} ${endInfo.timeNoSeconds}`;
+}
+
+function parseHM(hm, dayUtc) {
+    const baseTime = (dayUtc instanceof Date ? dayUtc : startOfTimezoneDay(new Date())).getTime();
+    if (!hm) return new Date(baseTime);
+    const parts = hm.split(':');
+    const hours = Number.parseInt(parts[0], 10);
+    const minutes = parts.length > 1 ? Number.parseInt(parts[1], 10) : 0;
+    const safeHours = Number.isFinite(hours) ? hours : 0;
+    const safeMinutes = Number.isFinite(minutes) ? minutes : 0;
+    return new Date(baseTime + safeHours * 3600000 + safeMinutes * 60000);
+}
+
+function normalize(arr, dayUtc) {
+    const baseDay = dayUtc instanceof Date ? dayUtc : startOfTimezoneDay(new Date());
     return arr.map(item => {
-        const start = parseHM(item.start);
-        const end = parseHM(item.end || item.start);
-        return Object.assign({}, item, { _s: start, _e: end });
+        const start = parseHM(item.start, baseDay);
+        const end = parseHM(item.end || item.start, baseDay);
+        const sameTime = !item.end || item.end === item.start;
+        return Object.assign({}, item, {
+            _s: start,
+            _e: end,
+            _startLabel: formatScheduleTime(start),
+            _endLabel: formatScheduleTime(end),
+            _rangeLabel: formatScheduleRange(start, end, sameTime)
+        });
     });
 }
 
@@ -656,13 +882,15 @@ function determineCurrentSchedule() {
 }
 
 function getRenderContext() {
-    if (previewDate) {
-        const dateStr = formatDateKey(previewDate);
-        const day = calendarData && calendarData[dateStr];
+    if (previewDateKey) {
+        const dateStr = previewDateKey;
+        const parsed = previewDate instanceof Date ? previewDate : parseDateKey(dateStr);
+        const dateUtc = parsed instanceof Date ? parsed : startOfTimezoneDay(new Date());
         let type = null;
         let name = null;
         let scheduleArr = null;
         let scheduleKey = null;
+        const day = calendarData && calendarData[dateStr];
         if (day) {
             if (day.type === 'special') {
                 type = 'special';
@@ -678,14 +906,18 @@ function getRenderContext() {
                 scheduleArr = scheduleCache[type] || null;
             }
         }
-        return { mode: 'preview', dateStr, type, name, scheduleArr, scheduleKey };
+        return { mode: 'preview', dateStr, dateUtc, type, name, scheduleArr, scheduleKey };
     }
+    const now = new Date();
+    const dateStr = formatDateKey(now);
+    const dateUtc = parseDateKey(dateStr) || startOfTimezoneDay(now);
     if (currentScheduleType === 'special') {
         const scheduleKey = specialToday && specialToday.scheduleKey ? specialToday.scheduleKey : null;
         const scheduleArr = scheduleKey ? specialScheduleCache[scheduleKey] || (specialToday && specialToday.scheduleData) || null : null;
         return {
             mode: 'today',
-            dateStr: formatDateKey(new Date()),
+            dateStr,
+            dateUtc,
             type: 'special',
             name: specialToday ? specialToday.name : scheduleName('special'),
             scheduleArr,
@@ -694,7 +926,8 @@ function getRenderContext() {
     }
     return {
         mode: 'today',
-        dateStr: formatDateKey(new Date()),
+        dateStr,
+        dateUtc,
         type: currentScheduleType,
         name: currentScheduleType ? scheduleName(currentScheduleType) : null,
         scheduleArr: currentScheduleType ? scheduleCache[currentScheduleType] || null : null,
@@ -737,8 +970,7 @@ function buildTimeline(container, data) {
         label.textContent = entry.name || '';
         const time = document.createElement('div');
         time.className = 'time';
-        const timeText = entry.start ? entry.start + (entry.end && entry.end !== entry.start ? ' - ' + entry.end : '') : '';
-        time.textContent = timeText;
+        time.textContent = entry._rangeLabel || '';
         const meta = document.createElement('div');
         meta.className = 'meta';
         meta.textContent = kindLabel(entry.kind);
@@ -815,6 +1047,7 @@ function updateTimeline() {
     if (isLoading) return;
     const ctx = getRenderContext();
     let raw = ctx.scheduleArr;
+    const renderDay = ctx.dateUtc instanceof Date ? ctx.dateUtc : startOfTimezoneDay(new Date());
     if (ctx.type === 'special' && ctx.scheduleKey) {
         if (specialScheduleErrors[ctx.scheduleKey]) {
             const displayName = ctx.name || scheduleName('special');
@@ -960,7 +1193,7 @@ function updateTimeline() {
     if (timeNotice) timeNotice.textContent = '';
     if (emptyMessage) emptyMessage.classList.add('hidden');
     if (timelineContainer) timelineContainer.classList.remove('hidden');
-    const data = normalize(raw);
+    const data = normalize(raw, renderDay);
     if (timeline && (timelineNodes.length !== data.length || timeline.childElementCount === 0)) {
         timelineNodes = buildTimeline(timeline, data);
     }
@@ -1025,7 +1258,13 @@ function updateTimeline() {
         const lastNode = timelineNodes[timelineNodes.length - 1];
         targetPosition = lastNode.item.offsetTop + lastNode.item.offsetHeight;
     }
-    if (railProgress) railProgress.style.height = Math.max(targetPosition, 0) + 'px';
+    if (railProgress) {
+        if (isAfterEnd) {
+            railProgress.style.height = '100%';
+        } else {
+            railProgress.style.height = Math.max(targetPosition, 0) + 'px';
+        }
+    }
     if (railDot) {
         railDot.style.top = Math.max(targetPosition, 0) + 'px';
         railDot.classList.toggle('visible', showDot);
@@ -1109,14 +1348,14 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
         if (statusEl) statusEl.textContent = statusText;
         if (typeEl) typeEl.textContent = kindLabel(currentItem.kind);
         if (titleEl) titleEl.textContent = (isSpecialDay ? cardSpecialPrefix : '') + (currentItem.name || '');
-        if (timeRange) timeRange.textContent = `${currentItem.start || ''}${currentItem.end && currentItem.end !== currentItem.start ? ' - ' + currentItem.end : ''}`;
+        if (timeRange) timeRange.textContent = currentItem._rangeLabel || '';
         if (progressBar) progressBar.style.setProperty('--progress', (progress(now, currentItem._s, currentItem._e) * 100) + '%');
         card.classList.add('active');
     } else if (nextItem) {
         if (statusEl) statusEl.textContent = statusText;
         if (typeEl) typeEl.textContent = kindLabel(nextItem.kind);
         if (titleEl) titleEl.textContent = (isSpecialDay ? cardSpecialPrefix : '') + cardNextPrefix + (nextItem.name || '');
-        if (timeRange) timeRange.textContent = `${nextItem.start || ''}${nextItem.end && nextItem.end !== nextItem.start ? ' - ' + nextItem.end : ''}`;
+        if (timeRange) timeRange.textContent = nextItem._rangeLabel || '';
         if (progressBar) progressBar.style.setProperty('--progress', '0%');
         card.classList.remove('active');
     }
@@ -1125,15 +1364,15 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
     card.classList.remove('hidden');
 }
 
-function getGreetingMessage() {
-    const hour = new Date().getHours();
+function getGreetingMessage(now = new Date()) {
+    const { hours } = getTimezoneTimeParts(now);
     for (let i = 0; i < greetingsConfig.length; i++) {
         const item = greetingsConfig[i];
         if (typeof item.start !== 'number' || typeof item.end !== 'number') continue;
         if (item.start <= item.end) {
-            if (hour >= item.start && hour < item.end) return item.text || '';
+            if (hours >= item.start && hours < item.end) return item.text || '';
         } else {
-            if (hour >= item.start || hour < item.end) return item.text || '';
+            if (hours >= item.start || hours < item.end) return item.text || '';
         }
     }
     return greetingsConfig.length > 0 ? greetingsConfig[0].text || '' : '';
@@ -1141,20 +1380,17 @@ function getGreetingMessage() {
 
 function updateClock() {
     const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
     const clock = document.getElementById('clock');
     const greeting = document.getElementById('greeting');
-    if (clock) clock.textContent = `${h}:${m}:${s}`;
-    if (greeting) greeting.textContent = getGreetingMessage();
+    if (clock) clock.textContent = formatClockDisplay(now);
+    if (greeting) greeting.textContent = getGreetingMessage(now);
 }
 
 function updateScheduleTitle() {
     const title = document.getElementById('scheduleTitle');
     if (!title) return;
-    if (previewDate) {
-        const ds = formatDateKey(previewDate);
+    if (previewDateKey) {
+        const ds = previewDateKey;
         const day = calendarData && calendarData[ds];
         if (!day || day.type === 'rest' || !day.type) {
             title.innerHTML = `<span class="emoji">${scheduleTitlePreviewEmoji}</span> ${scheduleTitlePreviewNoPlanText}`;
@@ -1186,6 +1422,7 @@ function restoreDefaultSchedule() {
     manualScheduleOverride = null;
     determineCurrentSchedule();
     previewDate = null;
+    previewDateKey = null;
     timelineNodes = [];
     hasInitialScroll = false;
     setCardLoadingState();
@@ -1253,6 +1490,7 @@ function showSwitchModal() {
             currentScheduleType = type;
             specialToday = null;
             previewDate = null;
+            previewDateKey = null;
             timelineNodes = [];
             hasInitialScroll = false;
             setCardLoadingState();
@@ -1275,8 +1513,163 @@ function closeSwitchModal() {
     if (modal) modal.classList.remove('show');
 }
 
+function initializeSettingsUI() {
+    if (settingsUIInitialized) return;
+    const button = document.getElementById('settingsButton');
+    const modal = document.getElementById('settingsModal');
+    const saveBtn = document.getElementById('settingsSaveBtn');
+    const cancelBtn = document.getElementById('settingsCancelBtn');
+    const form = document.getElementById('settingsForm');
+    const timezoneInput = document.getElementById('timezoneInput');
+    const formatButtons = Array.from(document.querySelectorAll('.format-option'));
+    if (!button || !modal || !saveBtn || !cancelBtn || !form || !timezoneInput || formatButtons.length === 0) return;
+    settingsUIInitialized = true;
+    button.addEventListener('click', openSettingsModal);
+    cancelBtn.addEventListener('click', () => closeSettingsModal(true));
+    saveBtn.addEventListener('click', event => {
+        event.preventDefault();
+        handleSettingsSave();
+    });
+    modal.addEventListener('click', event => {
+        if (event.target === modal) closeSettingsModal(true);
+    });
+    form.addEventListener('submit', event => {
+        event.preventDefault();
+        handleSettingsSave();
+    });
+    formatButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            setActiveFormatButton(btn.dataset.format);
+        });
+    });
+    timezoneInput.addEventListener('input', () => {
+        const errorEl = document.getElementById('timezoneError');
+        if (errorEl) errorEl.textContent = '';
+    });
+    pendingTimeFormat = activeTimeFormat;
+    setActiveFormatButton(activeTimeFormat);
+    timezoneInput.value = userSettings.timezone || '';
+    timezoneInput.removeAttribute('aria-invalid');
+}
+
+function openSettingsModal() {
+    if (isSettingsModalOpen) return;
+    const modal = document.getElementById('settingsModal');
+    const timezoneInput = document.getElementById('timezoneInput');
+    const errorEl = document.getElementById('timezoneError');
+    if (!modal || !timezoneInput) return;
+    isSettingsModalOpen = true;
+    pendingTimeFormat = activeTimeFormat;
+    setActiveFormatButton(pendingTimeFormat);
+    timezoneInput.value = userSettings.timezone || '';
+    timezoneInput.removeAttribute('aria-invalid');
+    if (errorEl) errorEl.textContent = '';
+    modal.classList.add('show');
+    modal.setAttribute('aria-hidden', 'false');
+    setTimeout(() => timezoneInput.focus(), 50);
+    document.addEventListener('keydown', handleSettingsKeydown);
+}
+
+function closeSettingsModal(reset = true) {
+    const modal = document.getElementById('settingsModal');
+    if (!modal) return;
+    if (!modal.classList.contains('show')) return;
+    isSettingsModalOpen = false;
+    modal.classList.remove('show');
+    modal.setAttribute('aria-hidden', 'true');
+    document.removeEventListener('keydown', handleSettingsKeydown);
+    if (reset) {
+        const timezoneInput = document.getElementById('timezoneInput');
+        const errorEl = document.getElementById('timezoneError');
+        if (timezoneInput) timezoneInput.value = userSettings.timezone || '';
+        if (timezoneInput) timezoneInput.removeAttribute('aria-invalid');
+        if (errorEl) errorEl.textContent = '';
+        setActiveFormatButton(activeTimeFormat);
+    }
+    const opener = document.getElementById('settingsButton');
+    if (opener) opener.focus();
+}
+
+function handleSettingsKeydown(event) {
+    if (event.key === 'Escape') {
+        event.preventDefault();
+        closeSettingsModal(true);
+    }
+}
+
+function setActiveFormatButton(format) {
+    pendingTimeFormat = format === '24' ? '24' : '12';
+    const buttons = document.querySelectorAll('.format-option');
+    buttons.forEach(button => {
+        const isActive = button.dataset.format === pendingTimeFormat;
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        button.classList.toggle('active', isActive);
+    });
+}
+
+function handleSettingsSave() {
+    const timezoneInput = document.getElementById('timezoneInput');
+    const errorEl = document.getElementById('timezoneError');
+    if (!timezoneInput) return;
+    const previousOffset = timezoneOffsetMinutes;
+    const previousFormat = activeTimeFormat;
+    const previousLabel = userSettings.timezone;
+    const inputValue = timezoneInput.value.trim();
+    const parsed = parseTimezoneValue(inputValue);
+    if (!parsed) {
+        if (errorEl) errorEl.textContent = '请输入有效的时区（例如 UTC+8、UTC-2、GMT+9）';
+        timezoneInput.focus();
+        timezoneInput.setAttribute('aria-invalid', 'true');
+        return;
+    }
+    timezoneInput.removeAttribute('aria-invalid');
+    const nextFormat = pendingTimeFormat === '24' ? '24' : '12';
+    const offsetChanged = parsed.offsetMinutes !== previousOffset;
+    const formatChanged = nextFormat !== previousFormat;
+    const labelChanged = parsed.normalized !== previousLabel;
+    if (!offsetChanged && !formatChanged && !labelChanged) {
+        closeSettingsModal(true);
+        return;
+    }
+    userSettings = {
+        timezone: parsed.normalized,
+        offsetMinutes: parsed.offsetMinutes,
+        timeFormat: nextFormat
+    };
+    timezoneOffsetMinutes = parsed.offsetMinutes;
+    timezoneOffsetMs = timezoneOffsetMinutes * 60000;
+    activeTimeFormat = nextFormat;
+    pendingTimeFormat = nextFormat;
+    persistSettings(userSettings);
+    if (errorEl) errorEl.textContent = '';
+    closeSettingsModal(false);
+    applySettingsChanges();
+}
+
+function applySettingsChanges() {
+    if (previewDateKey) {
+        previewDate = parseDateKey(previewDateKey) || startOfTimezoneDay(new Date());
+    }
+    pendingTimeFormat = activeTimeFormat;
+    setActiveFormatButton(activeTimeFormat);
+    if (!isSettingsModalOpen) {
+        const timezoneInput = document.getElementById('timezoneInput');
+        if (timezoneInput) timezoneInput.value = userSettings.timezone || '';
+        const errorEl = document.getElementById('timezoneError');
+        if (errorEl) errorEl.textContent = '';
+    }
+    determineCurrentSchedule();
+    hasInitialScroll = false;
+    timelineNodes = [];
+    updateScheduleTitle();
+    buildCalendar();
+    updateSwitchButton();
+    updateClock();
+    updateTimeline();
+}
+
 function handleSwitchButtonClick() {
-    if (previewDate) {
+    if (previewDateKey) {
         exitPreview();
     } else {
         showSwitchModal();
@@ -1285,6 +1678,7 @@ function handleSwitchButtonClick() {
 
 function exitPreview() {
     previewDate = null;
+    previewDateKey = null;
     hasInitialScroll = false;
     timelineNodes = [];
     updateScheduleTitle();
@@ -1297,8 +1691,8 @@ function updateCalendarPreviewHighlight() {
     if (!strip) return;
     const highlighted = strip.querySelectorAll('.calendar-date.preview');
     highlighted.forEach(el => el.classList.remove('preview'));
-    if (!previewDate) return;
-    const ds = formatDateKey(previewDate);
+    if (!previewDateKey) return;
+    const ds = previewDateKey;
     const target = strip.querySelector(`.calendar-date[data-date="${ds}"]`);
     if (!target || target.classList.contains('today')) return;
     target.classList.add('preview');
@@ -1309,7 +1703,7 @@ function updateSwitchButton() {
     if (!btn) return;
     const btnText = btn.querySelector('.switch-btn-text');
     if (!btnText) return;
-    if (previewDate) {
+    if (previewDateKey) {
         btn.classList.add('exit-preview');
         btnText.textContent = switchButtonPreviewText;
     } else {
@@ -1327,14 +1721,14 @@ function buildCalendar() {
     if (!strip) return;
     const calendarTitleEl = document.querySelector('.calendar-title');
     if (calendarTitleEl) calendarTitleEl.textContent = calendarTitleText;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const todayUtc = startOfTimezoneDay(new Date());
     for (let i = -daysBefore; i <= daysAfter; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() + i);
-        const dateStr = formatDateKey(date);
+        const dateUtc = new Date(todayUtc.getTime() + i * 86400000);
+        const dateStr = formatDateKey(dateUtc);
         const dayData = calendarData ? calendarData[dateStr] : null;
-        const weekday = weekdayNames[date.getDay()];
+        const parts = getTimezoneTimeParts(dateUtc);
+        const weekdayIndex = Number.isInteger(parts.weekday) ? parts.weekday % weekdayNames.length : 0;
+        const weekday = weekdayNames[weekdayIndex] || '';
         const dateEl = document.createElement('div');
         dateEl.className = 'calendar-date';
         dateEl.dataset.date = dateStr;
@@ -1343,7 +1737,7 @@ function buildCalendar() {
         weekdayEl.textContent = i === 0 ? calendarTodayLabel : weekday;
         const numberEl = document.createElement('div');
         numberEl.className = 'date-number';
-        numberEl.textContent = date.getDate();
+        numberEl.textContent = parts.date;
         dateEl.appendChild(weekdayEl);
         dateEl.appendChild(numberEl);
         let typeKey = dayData && dayData.type ? dayData.type : null;
@@ -1368,7 +1762,7 @@ function buildCalendar() {
         }
         applyCalendarTypeStyles(dateEl, typeKey);
         if (i === 0) dateEl.classList.add('today');
-        if (date < today) dateEl.classList.add('past');
+        if (dateUtc.getTime() < todayUtc.getTime()) dateEl.classList.add('past');
         strip.appendChild(dateEl);
     }
     strip.addEventListener('click', event => {
@@ -1379,6 +1773,7 @@ function buildCalendar() {
         const todayStr = formatDateKey(new Date());
         if (ds === todayStr) {
             previewDate = null;
+            previewDateKey = null;
             hasInitialScroll = false;
             timelineNodes = [];
             updateScheduleTitle();
@@ -1386,7 +1781,8 @@ function buildCalendar() {
             updateTimeline();
             return;
         }
-        previewDate = new Date(ds + 'T00:00:00');
+        previewDateKey = ds;
+        previewDate = parseDateKey(ds) || startOfTimezoneDay(new Date());
         hasInitialScroll = false;
         timelineNodes = [];
         updateScheduleTitle();
@@ -1475,6 +1871,7 @@ function initUI() {
     updateTimeline();
     buildCalendar();
     updateSwitchButton();
+    initializeSettingsUI();
     const switchBtn = document.getElementById('switchScheduleBtn');
     if (switchBtn) switchBtn.addEventListener('click', handleSwitchButtonClick);
     const githubLink = document.querySelector('.github-fab');
@@ -1484,7 +1881,7 @@ function initUI() {
 
 function tick() {
     const now = new Date();
-    const s = now.getSeconds();
+    const s = toTimezoneDate(now).getUTCSeconds();
     if (s !== lastTick) {
         lastTick = s;
         updateClock();
