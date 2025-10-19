@@ -3,6 +3,7 @@ const siteConfig = config.site || {};
 if (siteConfig.title) document.title = siteConfig.title;
 
 const pathConfig = config.paths || {};
+const themePath = pathConfig.theme || 'data/theme.json';
 const defaultsConfig = config.defaults || {};
 const scheduleTypeConfig = config.scheduleTypes || {};
 const kindConfig = config.kinds || {};
@@ -134,6 +135,18 @@ const specialScheduleCache = {};
 const specialScheduleRequests = {};
 const specialScheduleErrors = {};
 
+const defaultTypeStyle = Object.freeze({
+    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.14) 100%)',
+    text: 'var(--text)',
+    subtext: 'var(--muted)',
+    border: 'rgba(255, 255, 255, 0.12)',
+    optionAccent: 'var(--accent)'
+});
+const calendarTypeStyles = Object.create(null);
+calendarTypeStyles.__default = defaultTypeStyle;
+
+let themeConfig = null;
+
 let calendarData = null;
 let currentScheduleType = null;
 let manualScheduleOverride = null;
@@ -171,6 +184,64 @@ function resolveResource(base, identifier, extension) {
     if (isAbsoluteUrl(identifier) || isRootRelative(identifier)) return identifier;
     const file = ensureExtension(identifier, extension);
     return joinPath(base, file);
+}
+
+function setCSSVariable(name, value) {
+    if (typeof document === 'undefined' || !document.documentElement) return;
+    if (!name || value === undefined || value === null) return;
+    const normalized = String(value).trim();
+    if (!normalized) return;
+    document.documentElement.style.setProperty(name, normalized);
+}
+
+function applyTheme(theme) {
+    if (!theme || typeof theme !== 'object') return;
+    const colors = theme.colors && typeof theme.colors === 'object' ? theme.colors : theme;
+    if (!colors) return;
+    if (isNonEmptyString(colors.accent)) setCSSVariable('--accent', colors.accent);
+    if (isNonEmptyString(colors.accentWeak)) setCSSVariable('--accent-weak', colors.accentWeak);
+    if (isNonEmptyString(colors.todayText)) setCSSVariable('--calendar-today-text', colors.todayText);
+
+    const todayColors = colors.today && typeof colors.today === 'object' ? colors.today : null;
+    if (todayColors) {
+        if (isNonEmptyString(todayColors.text)) setCSSVariable('--calendar-today-text', todayColors.text);
+        if (isNonEmptyString(todayColors.outline)) setCSSVariable('--calendar-today-outline', todayColors.outline);
+        if (isNonEmptyString(todayColors.ring)) setCSSVariable('--calendar-today-ring', todayColors.ring);
+        if (isNonEmptyString(todayColors.shadow)) setCSSVariable('--calendar-today-shadow', todayColors.shadow);
+        if (isNonEmptyString(todayColors.glow)) setCSSVariable('--calendar-today-glow', todayColors.glow);
+        if (isNonEmptyString(todayColors.numberShadow)) setCSSVariable('--calendar-today-number-shadow', todayColors.numberShadow);
+        if (isNonEmptyString(todayColors.subtextShadow)) setCSSVariable('--calendar-today-subtext-shadow', todayColors.subtextShadow);
+    }
+
+    resetTypeStyles();
+    if (colors.calendarDefault) registerTypeStyle('default', colors.calendarDefault);
+    const calendarColors = colors.calendar && typeof colors.calendar === 'object' ? colors.calendar : null;
+    if (calendarColors) {
+        Object.entries(calendarColors).forEach(([key, value]) => {
+            registerTypeStyle(key, value);
+        });
+    }
+    const typeColors = colors.types && typeof colors.types === 'object' ? colors.types : null;
+    if (typeColors) {
+        Object.entries(typeColors).forEach(([key, value]) => {
+            registerTypeStyle(key, value);
+        });
+    }
+    if (!calendarTypeStyles.__default) {
+        calendarTypeStyles.__default = defaultTypeStyle;
+    }
+}
+
+async function loadTheme() {
+    if (!themePath) return;
+    try {
+        const response = await fetch(themePath, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`Theme request failed with status ${response.status}`);
+        themeConfig = await response.json();
+        applyTheme(themeConfig);
+    } catch (error) {
+        console.warn('Failed to load theme config:', error);
+    }
 }
 
 function getScheduleUrl(type) {
@@ -259,6 +330,109 @@ function legacyTypeClass(type) {
     if (!type) return '';
     if (type === 'self-study') return 'selfstudy';
     return type.toString().toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
+function isNonEmptyString(value) {
+    return typeof value === 'string' && value.trim() !== '';
+}
+
+function themeAliases(key) {
+    if (!key || typeof key !== 'string') return [];
+    const trimmed = key.trim();
+    if (!trimmed) return [];
+    const aliases = new Set([trimmed]);
+    const lower = trimmed.toLowerCase();
+    if (lower !== trimmed) aliases.add(lower);
+    const normalized = normalizeTypeClass(trimmed);
+    if (normalized) aliases.add(normalized);
+    const legacy = legacyTypeClass(trimmed);
+    if (legacy) aliases.add(legacy);
+    return Array.from(aliases);
+}
+
+function resetTypeStyles() {
+    Object.keys(calendarTypeStyles).forEach(key => {
+        if (key !== '__default') delete calendarTypeStyles[key];
+    });
+    calendarTypeStyles.__default = defaultTypeStyle;
+}
+
+function sanitizeTypeStyle(value) {
+    if (!value) return null;
+    let base = value;
+    if (typeof value === 'object' && value.calendar && typeof value.calendar === 'object') {
+        base = value.calendar;
+    }
+    const style = {};
+    if (isNonEmptyString(base.background)) style.background = base.background;
+    else if (isNonEmptyString(base.bg)) style.background = base.bg;
+    if (isNonEmptyString(base.text)) style.text = base.text;
+    else if (isNonEmptyString(base.color)) style.text = base.color;
+    else if (isNonEmptyString(base.foreground)) style.text = base.foreground;
+    if (isNonEmptyString(base.subtext)) style.subtext = base.subtext;
+    else if (typeof value === 'object' && isNonEmptyString(value.subtext)) style.subtext = value.subtext;
+    if (isNonEmptyString(base.border)) style.border = base.border;
+    else if (isNonEmptyString(base.outline)) style.border = base.outline;
+    else if (typeof value === 'object' && isNonEmptyString(value.border)) style.border = value.border;
+    if (typeof value === 'object') {
+        if (isNonEmptyString(value.optionAccent)) style.optionAccent = value.optionAccent;
+        else if (isNonEmptyString(value.option)) style.optionAccent = value.option;
+        else if (isNonEmptyString(value.accent)) style.optionAccent = value.accent;
+        else if (isNonEmptyString(base.optionAccent)) style.optionAccent = base.optionAccent;
+    }
+    if (!style.subtext && style.text) style.subtext = style.text;
+    if (!style.optionAccent) {
+        if (style.text) style.optionAccent = style.text;
+        else if (style.border) style.optionAccent = style.border;
+    }
+    return Object.keys(style).length ? style : null;
+}
+
+function registerTypeStyle(key, value) {
+    if (!key) return;
+    const style = sanitizeTypeStyle(value);
+    if (!style) return;
+    const frozen = Object.freeze(style);
+    const aliases = themeAliases(key);
+    aliases.forEach(alias => {
+        if (alias) calendarTypeStyles[alias] = frozen;
+    });
+    if (aliases.includes('default') || key === 'default' || key === '*') {
+        calendarTypeStyles.__default = frozen;
+    }
+}
+
+function getTypeStyle(type) {
+    const base = calendarTypeStyles.__default || defaultTypeStyle;
+    if (!type) return base;
+    const aliases = themeAliases(type);
+    for (let i = 0; i < aliases.length; i++) {
+        const alias = aliases[i];
+        if (alias && calendarTypeStyles[alias]) return calendarTypeStyles[alias];
+    }
+    return base;
+}
+
+function applyCalendarTypeStyles(element, type) {
+    if (!element) return;
+    const base = calendarTypeStyles.__default || defaultTypeStyle;
+    const style = getTypeStyle(type);
+    const background = style.background || base.background;
+    const text = style.text || base.text;
+    const subtext = style.subtext || style.text || base.subtext || base.text;
+    const border = style.border || base.border;
+    if (background) element.style.setProperty('--calendar-date-bg', background);
+    if (text) element.style.setProperty('--calendar-date-text', text);
+    if (subtext) element.style.setProperty('--calendar-date-subtext', subtext);
+    if (border) element.style.setProperty('--calendar-date-border', border);
+}
+
+function applyScheduleOptionTheme(element, type) {
+    if (!element) return;
+    const base = calendarTypeStyles.__default || defaultTypeStyle;
+    const style = getTypeStyle(type);
+    const accent = style.optionAccent || style.text || base.optionAccent || base.text || 'var(--accent)';
+    element.style.setProperty('--schedule-option-accent', accent);
 }
 
 function applyInitialTexts() {
@@ -588,17 +762,27 @@ function adjustRailHeight() {
     const rail = document.querySelector('.rail');
     const railTrack = document.querySelector('.rail-track');
     const emptyMessage = document.getElementById('emptyMessage');
-    if (timeline && rail && railTrack) {
+    if (!timeline || !rail || !railTrack) return;
+    const applyHeight = () => {
+        rail.style.removeProperty('min-height');
+        railTrack.style.removeProperty('height');
         const isEmpty = (emptyMessage && !emptyMessage.classList.contains('hidden')) || timeline.childElementCount === 0;
         if (isEmpty) {
             const approx = Math.max(emptyMessage ? emptyMessage.offsetHeight : 200, 200);
-            rail.style.minHeight = approx + 'px';
-            railTrack.style.height = approx + 'px';
+            rail.style.minHeight = `${approx}px`;
+            railTrack.style.height = `${approx}px`;
             return;
         }
-        const timelineHeight = timeline.scrollHeight;
-        rail.style.minHeight = timelineHeight + 'px';
-        railTrack.style.height = timelineHeight + 'px';
+        const timelineRect = timeline.getBoundingClientRect();
+        const measured = Math.max(timeline.scrollHeight, timeline.offsetHeight, Math.round(timelineRect.height));
+        const height = Math.max(measured, 0);
+        rail.style.minHeight = `${height}px`;
+        railTrack.style.height = `${height}px`;
+    };
+    if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(applyHeight);
+    } else {
+        setTimeout(applyHeight, 0);
     }
 }
 
@@ -1058,8 +1242,10 @@ function showSwitchModal() {
     const types = getSwitchTypes();
     types.forEach(type => {
         const option = document.createElement('div');
-        option.className = `schedule-option ${legacyTypeClass(type)} type-${normalizeTypeClass(type)}`;
+        option.className = 'schedule-option';
+        if (type) option.dataset.type = type;
         option.textContent = scheduleName(type);
+        applyScheduleOptionTheme(option, type);
         option.onclick = () => {
             manualScheduleOverride = type;
             localStorage.setItem(scheduleOverrideKey, type);
@@ -1147,13 +1333,16 @@ function buildCalendar() {
         numberEl.textContent = date.getDate();
         dateEl.appendChild(weekdayEl);
         dateEl.appendChild(numberEl);
-        if (dayData && dayData.type) {
-            const typeKey = dayData.type;
-            if (typeKey !== 'rest') {
-                const legacyClass = legacyTypeClass(typeKey);
-                if (legacyClass) dateEl.classList.add(legacyClass);
-                dateEl.classList.add(`type-${normalizeTypeClass(typeKey)}`);
-                if (typeKey === 'special') dateEl.classList.add('special');
+        let typeKey = dayData && dayData.type ? dayData.type : null;
+        if (typeKey) {
+            dateEl.dataset.type = typeKey;
+            if (typeKey === 'rest') {
+                dateEl.classList.add('rest');
+                const typeEl = document.createElement('div');
+                typeEl.className = 'date-type';
+                typeEl.textContent = calendarRestLabel;
+                dateEl.appendChild(typeEl);
+            } else {
                 const typeEl = document.createElement('div');
                 typeEl.className = 'date-type';
                 if (typeKey === 'special') {
@@ -1162,14 +1351,9 @@ function buildCalendar() {
                     typeEl.textContent = calendarTypeLabels[typeKey] || scheduleName(typeKey);
                 }
                 dateEl.appendChild(typeEl);
-            } else {
-                dateEl.classList.add('rest');
-                const typeEl = document.createElement('div');
-                typeEl.className = 'date-type';
-                typeEl.textContent = calendarRestLabel;
-                dateEl.appendChild(typeEl);
             }
         }
+        applyCalendarTypeStyles(dateEl, typeKey);
         if (i === 0) dateEl.classList.add('today');
         if (date < today) dateEl.classList.add('past');
         strip.appendChild(dateEl);
@@ -1313,4 +1497,6 @@ window.addEventListener('resize', () => {
 });
 
 applyInitialTexts();
-loadData();
+loadTheme().finally(() => {
+    loadData();
+});

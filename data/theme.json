@@ -1,0 +1,66 @@
+{
+    "colors": {
+        "accent": "#ff4f71",
+        "accentWeak": "rgba(255, 79, 113, 0.22)",
+        "today": {
+            "text": "#ff4f71",
+            "outline": "rgba(255, 79, 113, 0.75)",
+            "ring": "rgba(255, 79, 113, 0.16)",
+            "shadow": "rgba(255, 79, 113, 0.3)",
+            "glow": "rgba(255, 79, 113, 0.28)",
+            "numberShadow": "rgba(255, 79, 113, 0.45)",
+            "subtextShadow": "rgba(255, 79, 113, 0.35)"
+        },
+        "calendarDefault": {
+            "background": "linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.12) 100%)",
+            "text": "var(--text)",
+            "subtext": "var(--muted)",
+            "border": "rgba(255, 255, 255, 0.08)",
+            "optionAccent": "var(--accent)"
+        },
+        "calendar": {
+            "entry": {
+                "background": "linear-gradient(135deg, rgba(90, 132, 255, 0.16) 0%, rgba(79, 125, 255, 0.28) 100%)",
+                "text": "#f4f6ff",
+                "subtext": "#cbd7ff",
+                "border": "rgba(79, 125, 255, 0.45)",
+                "optionAccent": "#4f7dff"
+            },
+            "advanced": {
+                "background": "linear-gradient(135deg, rgba(180, 102, 247, 0.16) 0%, rgba(168, 85, 247, 0.28) 100%)",
+                "text": "#f8ecff",
+                "subtext": "#ddb9ff",
+                "border": "rgba(168, 85, 247, 0.4)",
+                "optionAccent": "#a855f7"
+            },
+            "data-stats": {
+                "background": "linear-gradient(135deg, rgba(23, 201, 180, 0.15) 0%, rgba(20, 184, 166, 0.27) 100%)",
+                "text": "#eafff9",
+                "subtext": "#abf2e4",
+                "border": "rgba(20, 184, 166, 0.38)",
+                "optionAccent": "#14b8a6"
+            },
+            "self-study": {
+                "background": "linear-gradient(135deg, rgba(245, 174, 26, 0.16) 0%, rgba(245, 158, 11, 0.28) 100%)",
+                "text": "#fff4df",
+                "subtext": "#fcd18a",
+                "border": "rgba(245, 158, 11, 0.42)",
+                "optionAccent": "#f59e0b"
+            },
+            "special": {
+                "background": "linear-gradient(135deg, rgba(240, 91, 163, 0.14) 0%, rgba(236, 72, 153, 0.26) 100%)",
+                "text": "#ffe7f2",
+                "subtext": "#f6acca",
+                "border": "rgba(236, 72, 153, 0.42)",
+                "optionAccent": "#ec4899"
+            },
+            "rest": {
+                "background": "linear-gradient(135deg, rgba(120, 130, 150, 0.12) 0%, rgba(120, 130, 150, 0.2) 100%)",
+                "text": "#d2d6e2",
+                "subtext": "#9aa1b4",
+                "border": "rgba(148, 158, 184, 0.28)",
+                "optionAccent": "#9aa1b4"
+            }
+        }
+    }
+}

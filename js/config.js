@@ -8,7 +8,8 @@ window.SCHEDULE_CONFIG = {
         scheduleDir: 'data/schedule',
         scheduleExtension: '.json',
         specialScheduleDir: 'data/special-schedule',
-        specialScheduleExtension: '.json'
+        specialScheduleExtension: '.json',
+        theme: 'data/theme.json'
     },
     defaults: {
         scheduleName: '课程',
