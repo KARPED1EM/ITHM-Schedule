@@ -509,7 +509,7 @@ body {
 .settings-actions {
     display: flex;
     gap: 12px;
-    margin-top: 24px;
+    margin-top: 64px;
 }
 .settings-save {
     background: var(--accent);
