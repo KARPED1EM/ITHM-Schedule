@@ -1250,17 +1250,20 @@ function updateTimeline() {
     }
     let targetPosition = 0;
     let showDot = !isBeforeStart && !isAfterEnd;
+    const hasActiveCurrent = currentIndex >= 0 && !isInGap && !isBeforeStart && !isAfterEnd;
     timelineNodes.forEach((node, index) => {
         const active = index === currentIndex && !isInGap && !isBeforeStart && !isAfterEnd;
         const before = (!isBeforeStart && (index < currentIndex || (index === currentIndex && isInGap))) || isAfterEnd;
         const upcoming = index > currentIndex && !isAfterEnd;
+        const isUpNext = upcoming && index === currentIndex + 1;
         if (node.span) {
             const value = active ? progress(now, node.entry._s, node.entry._e) * 100 + '%' : before ? '100%' : '0%';
             node.span.style.setProperty('--p', value);
         }
         node.item.classList.toggle('current', active);
         node.item.classList.toggle('past', before);
-        node.item.classList.toggle('upnext', upcoming && index === currentIndex + 1);
+        node.item.classList.toggle('upnext', isUpNext);
+        node.item.classList.toggle('upnext-standalone', isUpNext && !hasActiveCurrent);
         if (index === currentIndex && !isInGap && !isBeforeStart) {
             targetPosition = node.item.offsetTop + node.item.offsetHeight / 2;
         } else if (index === currentIndex && isInGap) {
