@@ -210,7 +210,12 @@ body {
 }
 .item.current { background: linear-gradient(180deg, #323749 0%, #2c3143 100%); outline-color: var(--accent); box-shadow: 0 12px 32px rgba(255,79,113,.18); transform: translateZ(0) scale(1.02); animation: breathe 3s ease-in-out infinite; }
 @keyframes breathe { 0%, 100% { transform: translateZ(0) scale(1.02); } 50% { transform: translateZ(0) scale(1.035); } }
-.item.upnext { outline-color: #f0c36a44; }
+.item.upnext {
+    outline-color: var(--upnext);
+    background: linear-gradient(145deg, rgba(255, 200, 97, 0.14) 0%, rgba(255, 200, 97, 0.06) 45%, #2c3143 100%);
+    box-shadow: 0 16px 32px rgba(255, 200, 97, 0.12);
+    transform: translateZ(0) scale(1.01);
+}
 .item.past { opacity: .5; }
 .label { color: #fff; font-weight: 700; font-size: 15px; letter-spacing: .2px; }
 .time { justify-self: end; color: #c8cfe2; font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px; }
