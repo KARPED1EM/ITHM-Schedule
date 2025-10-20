@@ -82,6 +82,8 @@ const statusCompletedTypeTodayText = statusesConfig.completedTypeToday || '今�
 const statusCompletedTypePreviewText = statusesConfig.completedTypePreview || '该日完成';
 const statusCompletedSpecialTypeText = statusesConfig.completedSpecialType || '今天是';
 const statusCompletedSpecialTitleText = statusesConfig.completedSpecialTitle || '请以实际通知为准';
+const statusTomorrowText = statusesConfig.tomorrow || '明日预告';
+const statusTomorrowRestText = statusesConfig.tomorrowRest || '明日无安排';
 
 const cardLoadingStatusText = cardConfig.loadingStatus || '加载中';
 const cardLoadingTypeText = cardConfig.loadingType || defaultScheduleName;
@@ -89,6 +91,12 @@ const cardLoadingTitleText = cardConfig.loadingTitle || '请稍候...';
 const cardLoadingCountdownLabelText = cardConfig.loadingCountdownLabel || '预计开始于';
 const cardNextPrefix = cardConfig.nextPrefix || '下一节：';
 const cardSpecialPrefix = cardConfig.specialPrefix || '今天是：';
+const cardTomorrowPrefix = cardConfig.tomorrowPrefix || '明日第一节：';
+const cardTomorrowStartLabel = cardConfig.tomorrowStartLabel || '开始时间';
+const cardTomorrowRestTitle = cardConfig.tomorrowRestTitle || '明天无安排';
+const cardTomorrowRestSubtitle = cardConfig.tomorrowRestSubtitle || '好好犒劳自己一天！';
+const cardTomorrowRestHighlight = cardConfig.tomorrowRestHighlight || '🎉🎉🎉';
+const cardTomorrowRestLabel = typeof cardConfig.tomorrowRestLabel === 'string' ? cardConfig.tomorrowRestLabel : '';
 
 const switchButtonDefaultText = switcherConfig.buttonDefault || '切换课表';
 const switchButtonPreviewText = switcherConfig.buttonPreview || '退出预览';
@@ -96,6 +104,7 @@ const switchButtonPreviewText = switcherConfig.buttonPreview || '退出预览';
 const calendarTitleText = calendarConfig.title || '本月日程';
 const calendarTodayLabel = (calendarConfig.labels && calendarConfig.labels.today) || '今日';
 const calendarRestLabel = (calendarConfig.labels && calendarConfig.labels.rest) || '休息';
+const cardTomorrowRestTypeText = typeof cardConfig.tomorrowRestType === 'string' && cardConfig.tomorrowRestType.trim() ? cardConfig.tomorrowRestType : calendarRestLabel || '休息日';
 const calendarTypeLabels = calendarConfig.typeLabels || {};
 const daysBefore = typeof calendarConfig.daysBefore === 'number' ? calendarConfig.daysBefore : 15;
 const daysAfter = typeof calendarConfig.daysAfter === 'number' ? calendarConfig.daysAfter : 15;
@@ -1297,6 +1306,67 @@ function formatCountdown(ms) {
     return [hours, minutes, seconds].map(v => String(v).padStart(2, '0')).join(':');
 }
 
+function getTomorrowPreview(ctx) {
+    if (!ctx) return null;
+    const baseDay = ctx.dateUtc instanceof Date ? ctx.dateUtc : startOfTimezoneDay(new Date());
+    const parts = getTimezoneTimeParts(baseDay);
+    const tomorrowUtc = fromTimezoneComponents(parts.year, parts.month, parts.date + 1);
+    const tomorrowKey = formatDateKey(tomorrowUtc);
+    const day = calendarData && calendarData[tomorrowKey];
+    if (!day || !day.type || day.type === 'rest') {
+        return { state: 'rest', dateUtc: tomorrowUtc, dateStr: tomorrowKey };
+    }
+    if (day.type === 'special') {
+        const scheduleKey = typeof day.schedule === 'string' ? day.schedule : typeof day.scheduleKey === 'string' ? day.scheduleKey : null;
+        const displayName = day.name || scheduleName('special');
+        if (!scheduleKey) {
+            return { state: 'rest', dateUtc: tomorrowUtc, dateStr: tomorrowKey, displayName };
+        }
+        const cached = specialScheduleCache[scheduleKey];
+        if (Array.isArray(cached) && cached.length) {
+            const normalized = normalize(cached, tomorrowUtc);
+            if (normalized.length) {
+                return {
+                    state: 'ready',
+                    dateUtc: tomorrowUtc,
+                    dateStr: tomorrowKey,
+                    firstItem: normalized[0],
+                    displayName,
+                    isSpecial: true
+                };
+            }
+            return { state: 'rest', dateUtc: tomorrowUtc, dateStr: tomorrowKey, displayName };
+        }
+        if (specialScheduleErrors[scheduleKey]) {
+            return { state: 'error', dateUtc: tomorrowUtc, dateStr: tomorrowKey, displayName };
+        }
+        loadSpecialSchedule(scheduleKey, true).catch(() => {});
+        return { state: 'loading', dateUtc: tomorrowUtc, dateStr: tomorrowKey, displayName };
+    }
+    const scheduleType = day.type;
+    const displayName = scheduleName(scheduleType);
+    const cached = scheduleCache[scheduleType];
+    if (Array.isArray(cached) && cached.length) {
+        const normalized = normalize(cached, tomorrowUtc);
+        if (normalized.length) {
+            return {
+                state: 'ready',
+                dateUtc: tomorrowUtc,
+                dateStr: tomorrowKey,
+                firstItem: normalized[0],
+                displayName,
+                isSpecial: false
+            };
+        }
+        return { state: 'rest', dateUtc: tomorrowUtc, dateStr: tomorrowKey, displayName };
+    }
+    if (scheduleErrors[scheduleType]) {
+        return { state: 'error', dateUtc: tomorrowUtc, dateStr: tomorrowKey, displayName };
+    }
+    loadSchedule(scheduleType, true).catch(() => {});
+    return { state: 'loading', dateUtc: tomorrowUtc, dateStr: tomorrowKey, displayName };
+}
+
 function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEnd, ctx) {
     const card = document.getElementById('currentCard');
     if (!card) return;
@@ -1307,6 +1377,15 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
         card.classList.add('hidden');
         return;
     }
+    const statusEl = card.querySelector('.card-status');
+    const typeEl = card.querySelector('.card-type');
+    const titleEl = card.querySelector('.card-title');
+    const timeRange = card.querySelector('.card-time-range');
+    const countdownLabelEl = card.querySelector('.countdown-label');
+    const countdownValue = card.querySelector('.countdown-value');
+    const progressBar = card.querySelector('.card-progress-bar');
+    card.classList.remove('upcoming');
+    card.classList.remove('rest-day');
     const now = new Date();
     const isSpecialDay = ctx.type === 'special';
     let currentItem = null;
@@ -1320,13 +1399,64 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
         countdownLabel = countdownUntilText;
         statusText = isSpecialDay ? statusSpecialText : statusBeforeStartText;
     } else if (isAfterEnd) {
-        const statusEl = card.querySelector('.card-status');
-        const typeEl = card.querySelector('.card-type');
-        const titleEl = card.querySelector('.card-title');
-        const timeRange = card.querySelector('.card-time-range');
-        const countdownLabelEl = card.querySelector('.countdown-label');
-        const countdownValue = card.querySelector('.countdown-value');
-        const progressBar = card.querySelector('.card-progress-bar');
+        if (ctx.mode === 'today') {
+            const tomorrowInfo = getTomorrowPreview(ctx);
+            if (tomorrowInfo) {
+                if (tomorrowInfo.state === 'ready' && tomorrowInfo.firstItem) {
+                    const schedulePrefix = tomorrowInfo.displayName ? `${tomorrowInfo.displayName} · ` : '';
+                    if (statusEl) statusEl.textContent = statusTomorrowText;
+                    if (typeEl) typeEl.textContent = kindLabel(tomorrowInfo.firstItem.kind);
+                    if (titleEl) titleEl.textContent = `${cardTomorrowPrefix}${schedulePrefix}${tomorrowInfo.firstItem.name || ''}`;
+                    if (timeRange) timeRange.textContent = tomorrowInfo.firstItem._rangeLabel || '';
+                    if (countdownLabelEl) countdownLabelEl.textContent = cardTomorrowStartLabel;
+                    if (countdownValue) countdownValue.textContent = tomorrowInfo.firstItem._startLabel || countdownPlaceholder;
+                    if (progressBar) progressBar.style.setProperty('--progress', '0%');
+                    card.classList.remove('active');
+                    card.classList.add('upcoming');
+                    card.classList.remove('hidden');
+                    return;
+                }
+                if (tomorrowInfo.state === 'loading') {
+                    if (statusEl) statusEl.textContent = statusTomorrowText;
+                    if (typeEl) typeEl.textContent = tomorrowInfo.displayName || cardLoadingTypeText;
+                    if (titleEl) titleEl.textContent = cardLoadingTitleText;
+                    if (timeRange) timeRange.textContent = '';
+                    if (countdownLabelEl) countdownLabelEl.textContent = cardLoadingCountdownLabelText;
+                    if (countdownValue) countdownValue.textContent = countdownPlaceholder;
+                    if (progressBar) progressBar.style.setProperty('--progress', '0%');
+                    card.classList.remove('active');
+                    card.classList.add('upcoming');
+                    card.classList.remove('hidden');
+                    return;
+                }
+                if (tomorrowInfo.state === 'error') {
+                    if (statusEl) statusEl.textContent = statusTomorrowText;
+                    if (typeEl) typeEl.textContent = tomorrowInfo.displayName || cardErrorTypeText;
+                    if (titleEl) titleEl.textContent = scheduleErrorTitle;
+                    if (timeRange) timeRange.textContent = scheduleErrorSubtitle;
+                    if (countdownLabelEl) countdownLabelEl.textContent = '';
+                    if (countdownValue) countdownValue.textContent = countdownPlaceholder;
+                    if (progressBar) progressBar.style.setProperty('--progress', '0%');
+                    card.classList.remove('active');
+                    card.classList.add('upcoming');
+                    card.classList.remove('hidden');
+                    return;
+                }
+                if (tomorrowInfo.state === 'rest') {
+                    if (statusEl) statusEl.textContent = statusTomorrowRestText;
+                    if (typeEl) typeEl.textContent = cardTomorrowRestTypeText;
+                    if (titleEl) titleEl.textContent = cardTomorrowRestTitle;
+                    if (timeRange) timeRange.textContent = cardTomorrowRestSubtitle;
+                    if (countdownLabelEl) countdownLabelEl.textContent = cardTomorrowRestLabel;
+                    if (countdownValue) countdownValue.textContent = cardTomorrowRestHighlight;
+                    if (progressBar) progressBar.style.setProperty('--progress', '0%');
+                    card.classList.remove('active');
+                    card.classList.add('rest-day');
+                    card.classList.remove('hidden');
+                    return;
+                }
+            }
+        }
         if (statusEl) statusEl.textContent = isSpecialDay ? statusSpecialText : ctx.mode === 'preview' ? statusCompletedPreviewText : statusCompletedTodayText;
         if (typeEl) typeEl.textContent = isSpecialDay ? statusCompletedSpecialTypeText : ctx.mode === 'preview' ? statusCompletedTypePreviewText : statusCompletedTypeTodayText;
         if (titleEl) titleEl.textContent = isSpecialDay ? (ctx.name || scheduleName('special')) : ctx.mode === 'preview' ? statusCompletedPreviewText : statusCompletedTodayText;
@@ -1348,13 +1478,6 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
         countdownLabel = countdownRemainingText;
         statusText = isSpecialDay ? statusSpecialText : statusInProgressText;
     }
-    const statusEl = card.querySelector('.card-status');
-    const typeEl = card.querySelector('.card-type');
-    const titleEl = card.querySelector('.card-title');
-    const timeRange = card.querySelector('.card-time-range');
-    const countdownLabelEl = card.querySelector('.countdown-label');
-    const countdownValue = card.querySelector('.countdown-value');
-    const progressBar = card.querySelector('.card-progress-bar');
     if (currentItem) {
         if (statusEl) statusEl.textContent = statusText;
         if (typeEl) typeEl.textContent = kindLabel(currentItem.kind);

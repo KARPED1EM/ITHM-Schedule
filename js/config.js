@@ -82,7 +82,9 @@ window.SCHEDULE_CONFIG = {
         completedTypeToday: '今日完成',
         completedTypePreview: '该日完成',
         completedSpecialType: '今天是',
-        completedSpecialTitle: '请以实际通知为准'
+        completedSpecialTitle: '请以实际通知为准',
+        tomorrow: '明日预告',
+        tomorrowRest: '明日无安排'
     },
     countdowns: {
         until: '距离开始',
@@ -95,7 +97,14 @@ window.SCHEDULE_CONFIG = {
         loadingTitle: '请稍候...',
         loadingCountdownLabel: '预计开始于',
         nextPrefix: '下一节：',
-        specialPrefix: '今天是：'
+        specialPrefix: '今天是：',
+        tomorrowPrefix: '明日第一节：',
+        tomorrowStartLabel: '开始时间',
+        tomorrowRestTitle: '明天无安排',
+        tomorrowRestSubtitle: '好好犒劳自己一天！',
+        tomorrowRestHighlight: '🎉🎉🎉',
+        tomorrowRestType: '休息日',
+        tomorrowRestLabel: '庆祝时间'
     },
     texts: {
         scheduleTitleLoading: '加载中...',
