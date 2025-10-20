@@ -397,6 +397,8 @@ body {
         0 14px 32px var(--calendar-today-shadow, rgba(255, 79, 113, 0.3)),
         0 6px 22px rgba(0, 0, 0, 0.35);
     transform: translateY(-2px) scale(1.04);
+    margin-left: 5px;
+    margin-right: 5px;
     z-index: 5;
 }
 .calendar-date.today::before {
