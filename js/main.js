@@ -143,11 +143,11 @@ const defaultSettings = Object.freeze({
     offsetMinutes: 480,
     timeFormat: '12'
 });
+const MAX_TIMEZONE_OFFSET_MINUTES = 14 * 60;
 let userSettings = loadSettings();
 let timezoneOffsetMinutes = userSettings.offsetMinutes;
 let timezoneOffsetMs = timezoneOffsetMinutes * 60000;
 let activeTimeFormat = userSettings.timeFormat === '24' ? '24' : '12';
-const MAX_TIMEZONE_OFFSET_MINUTES = 14 * 60;
 let pendingTimeFormat = activeTimeFormat;
 let isSettingsModalOpen = false;
 let settingsUIInitialized = false;
@@ -432,30 +432,53 @@ function loadSettings() {
         offsetMinutes: defaultSettings.offsetMinutes,
         timeFormat: defaultSettings.timeFormat
     };
+    const useFallback = () => ({ ...fallback });
     try {
-        if (typeof localStorage === 'undefined') return { ...fallback };
+        if (typeof localStorage === 'undefined') return useFallback();
         const stored = localStorage.getItem(settingsStorageKey);
-        if (!stored) return { ...fallback };
-        const parsed = JSON.parse(stored);
-        let timezoneText = typeof parsed.timezone === 'string' ? parsed.timezone : fallback.timezone;
+        if (!stored) return useFallback();
+        let parsed;
+        try {
+            parsed = JSON.parse(stored);
+        } catch (parseError) {
+            console.warn('Failed to parse stored settings, using defaults.', parseError);
+            return useFallback();
+        }
+        let timezoneText = typeof parsed.timezone === 'string' ? parsed.timezone.trim() : '';
+        if (!timezoneText) timezoneText = fallback.timezone;
         let timezoneInfo = parseTimezoneValue(timezoneText);
-        if (!timezoneInfo && Number.isFinite(parsed.offsetMinutes)) {
+        if (!timezoneInfo && parsed.offsetMinutes !== undefined && parsed.offsetMinutes !== null && parsed.offsetMinutes !== '') {
             const offset = Number(parsed.offsetMinutes);
-            if (Math.abs(offset) <= MAX_TIMEZONE_OFFSET_MINUTES) {
+            if (Number.isFinite(offset) && Math.abs(offset) <= MAX_TIMEZONE_OFFSET_MINUTES) {
                 timezoneInfo = { offsetMinutes: offset, normalized: formatTimezoneOffset(offset) };
             }
         }
         if (!timezoneInfo) timezoneInfo = parseTimezoneValue(fallback.timezone);
         if (!timezoneInfo) timezoneInfo = { offsetMinutes: fallback.offsetMinutes, normalized: fallback.timezone };
-        const timeFormat = parsed.timeFormat === '24' ? '24' : fallback.timeFormat;
-        return {
+        const rawFormat = parsed.timeFormat;
+        let timeFormat = fallback.timeFormat;
+        if (rawFormat === '24' || rawFormat === 24) {
+            timeFormat = '24';
+        } else if (typeof rawFormat === 'string' && rawFormat.trim() === '24') {
+            timeFormat = '24';
+        }
+        const normalized = {
             timezone: timezoneInfo.normalized,
             offsetMinutes: timezoneInfo.offsetMinutes,
             timeFormat
         };
+        try {
+            const normalizedJson = JSON.stringify(normalized);
+            if (stored !== normalizedJson) {
+                localStorage.setItem(settingsStorageKey, normalizedJson);
+            }
+        } catch (persistError) {
+            console.warn('Unable to normalize stored settings.', persistError);
+        }
+        return normalized;
     } catch (error) {
         console.warn('Failed to load settings, using defaults.', error);
-        return { ...fallback };
+        return useFallback();
     }
 }
 
