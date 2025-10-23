@@ -157,6 +157,6 @@ window.SCHEDULE_CONFIG = {
     switcher: {
         buttonDefault: '切换课表',
         buttonPreview: '退出预览',
-        types: ['entry', 'advanced', 'data-stats', 'self-study', 'ml-basics', 'data-mining']
+        types: ['entry', 'advanced', 'data-stats', 'ml-basics', 'data-mining', 'self-study']
     }
 };
