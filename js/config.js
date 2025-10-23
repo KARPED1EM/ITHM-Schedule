@@ -19,10 +19,12 @@ window.SCHEDULE_CONFIG = {
     },
     scheduleTypes: {
         default: { name: '今日课程', emoji: '📅' },
-        entry: { name: '入门课', emoji: '📅' },
-        advanced: { name: '进阶课', emoji: '🚀' },
+        entry: { name: '开发语言基础', emoji: '📅' },
+        advanced: { name: '开发语言进阶', emoji: '🚀' },
         'data-stats': { name: '数据与统计', emoji: '📊' },
         'self-study': { name: '自习日', emoji: '📚' },
+        'ml-basics': { name: '机器学习基础', emoji: '🤖' },
+        'data-mining': { name: '数据挖掘实战', emoji: '⛏️' },
         special: { name: '特殊安排', emoji: '⭐' }
     },
     kinds: {
@@ -51,7 +53,7 @@ window.SCHEDULE_CONFIG = {
         daysBefore: 15,
         daysAfter: 15,
         labels: { today: '今日', rest: '休息' },
-        typeLabels: { entry: '入门', advanced: '进阶', 'data-stats': '数据', 'self-study': '自习', special: '特殊' }
+        typeLabels: { entry: '开发基础', advanced: '开发进阶', 'data-stats': '数据', 'self-study': '自习', 'ml-basics': '机器学习', 'data-mining': '数据挖掘', special: '特殊' }
     },
     timeline: {
         gapLabel: '休息'
@@ -155,6 +157,6 @@ window.SCHEDULE_CONFIG = {
     switcher: {
         buttonDefault: '切换课表',
         buttonPreview: '退出预览',
-        types: ['entry', 'advanced', 'data-stats', 'self-study']
+        types: ['entry', 'advanced', 'data-stats', 'self-study', 'ml-basics', 'data-mining']
     }
 };
