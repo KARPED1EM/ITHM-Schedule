@@ -28,8 +28,17 @@
     "2025-10-22": { "type": "data-stats" },
     "2025-10-23": { "type": "data-stats" },
     "2025-10-25": { "type": "data-stats" },
-    "2025-10-26": { "type": "data-stats" },
+    "2025-10-26": { "type": "ml-basics" },
     "2025-10-27": { "type": "self-study" },
-    "2025-10-28": { "type": "data-stats" },
-    "2025-10-29": { "type": "data-stats" }
+    "2025-10-28": { "type": "ml-basics" },
+    "2025-10-29": { "type": "ml-basics" },
+    "2025-10-31": { "type": "ml-basics" },
+    "2025-11-01": { "type": "ml-basics" },
+    "2025-11-02": { "type": "self-study" },
+    "2025-11-03": { "type": "ml-basics" },
+    "2025-11-04": { "type": "ml-basics" },
+    "2025-11-06": { "type": "data-mining" },
+    "2025-11-07": { "type": "data-mining" },
+    "2025-11-08": { "type": "data-mining" },
+    "2025-11-10": { "type": "self-study" }
 }
