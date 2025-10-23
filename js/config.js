@@ -53,7 +53,7 @@ window.SCHEDULE_CONFIG = {
         daysBefore: 15,
         daysAfter: 15,
         labels: { today: '今日', rest: '休息' },
-        typeLabels: { entry: '开发入门', advanced: '开发进阶', 'data-stats': '数据', 'self-study': '自习', 'ml-basics': '机器学习', 'data-mining': '数据挖掘', special: '特殊' }
+        typeLabels: { entry: '开发入门', advanced: '开发进阶', 'data-stats': '数据统计', 'self-study': '自习', 'ml-basics': '机器学习', 'data-mining': '数据挖掘', special: '特殊' }
     },
     timeline: {
         gapLabel: '休息'
