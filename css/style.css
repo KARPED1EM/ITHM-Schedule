@@ -566,7 +566,7 @@ body {
     background: rgba(236,72,153,0.12); border: 1px solid rgba(236,72,153,0.35); color: #ffd3e7;
     padding: 10px 12px; border-radius: 10px; font-size: 12px; margin-bottom: 12px;
 }
-.schedule-options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; max-height: 50vh; overflow-y: auto; }
+.schedule-options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; max-height: 50vh; overflow-y: auto; overflow-x: hidden; padding-right: 8px; }
 .schedule-options::-webkit-scrollbar {
     width: 8px;
 }
