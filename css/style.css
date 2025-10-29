@@ -566,7 +566,22 @@ body {
     background: rgba(236,72,153,0.12); border: 1px solid rgba(236,72,153,0.35); color: #ffd3e7;
     padding: 10px 12px; border-radius: 10px; font-size: 12px; margin-bottom: 12px;
 }
-.schedule-options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
+.schedule-options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; max-height: 50vh; overflow-y: auto; overflow-x: hidden; padding-right: 8px; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05); }
+.schedule-options::-webkit-scrollbar {
+    width: 8px;
+}
+.schedule-options::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+}
+.schedule-options::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+.schedule-options::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
 .schedule-option {
     background: var(--card); border: 2px solid transparent; padding: 16px; border-radius: 12px; cursor: pointer;
     transition: all 0.2s ease; font-size: 16px; font-weight: 600; color: var(--text);
