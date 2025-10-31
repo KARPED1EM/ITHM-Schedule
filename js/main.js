@@ -1393,6 +1393,77 @@ function getTomorrowPreview(ctx) {
     return { state: 'loading', dateUtc: tomorrowUtc, dateStr: tomorrowKey, displayName };
 }
 
+function renderTomorrowPreview(card, tomorrowInfo) {
+    if (!card || !tomorrowInfo) return false;
+
+    const statusEl = card.querySelector('.card-status');
+    const typeEl = card.querySelector('.card-type');
+    const titleEl = card.querySelector('.card-title');
+    const timeRange = card.querySelector('.card-time-range');
+    const countdownLabelEl = card.querySelector('.countdown-label');
+    const countdownValue = card.querySelector('.countdown-value');
+    const progressBar = card.querySelector('.card-progress-bar');
+
+    if (tomorrowInfo.state === 'ready' && tomorrowInfo.firstItem) {
+        const schedulePrefix = tomorrowInfo.displayName ? `${tomorrowInfo.displayName} · ` : '';
+        if (statusEl) statusEl.textContent = statusTomorrowText;
+        if (typeEl) typeEl.textContent = kindLabel(tomorrowInfo.firstItem.kind);
+        if (titleEl) titleEl.textContent = `${cardTomorrowPrefix}${schedulePrefix}${tomorrowInfo.firstItem.name || ''}`;
+        if (timeRange) timeRange.textContent = tomorrowInfo.firstItem._rangeLabel || '';
+        if (countdownLabelEl) countdownLabelEl.textContent = cardTomorrowStartLabel;
+        if (countdownValue) countdownValue.textContent = tomorrowInfo.firstItem._startLabel || countdownPlaceholder;
+        if (progressBar) progressBar.style.setProperty('--progress', '0%');
+        card.classList.remove('active');
+        card.classList.add('upcoming');
+        card.classList.remove('hidden');
+        return true;
+    }
+
+    if (tomorrowInfo.state === 'loading') {
+        if (statusEl) statusEl.textContent = statusTomorrowText;
+        if (typeEl) typeEl.textContent = tomorrowInfo.displayName || cardLoadingTypeText;
+        if (titleEl) titleEl.textContent = cardLoadingTitleText;
+        if (timeRange) timeRange.textContent = '';
+        if (countdownLabelEl) countdownLabelEl.textContent = cardLoadingCountdownLabelText;
+        if (countdownValue) countdownValue.textContent = countdownPlaceholder;
+        if (progressBar) progressBar.style.setProperty('--progress', '0%');
+        card.classList.remove('active');
+        card.classList.add('upcoming');
+        card.classList.remove('hidden');
+        return true;
+    }
+
+    if (tomorrowInfo.state === 'error') {
+        if (statusEl) statusEl.textContent = statusTomorrowText;
+        if (typeEl) typeEl.textContent = tomorrowInfo.displayName || cardErrorTypeText;
+        if (titleEl) titleEl.textContent = scheduleErrorTitle;
+        if (timeRange) timeRange.textContent = scheduleErrorSubtitle;
+        if (countdownLabelEl) countdownLabelEl.textContent = '';
+        if (countdownValue) countdownValue.textContent = countdownPlaceholder;
+        if (progressBar) progressBar.style.setProperty('--progress', '0%');
+        card.classList.remove('active');
+        card.classList.add('upcoming');
+        card.classList.remove('hidden');
+        return true;
+    }
+
+    if (tomorrowInfo.state === 'rest') {
+        if (statusEl) statusEl.textContent = statusTomorrowRestText;
+        if (typeEl) typeEl.textContent = cardTomorrowRestTypeText;
+        if (titleEl) titleEl.textContent = cardTomorrowRestTitle;
+        if (timeRange) timeRange.textContent = cardTomorrowRestSubtitle;
+        if (countdownLabelEl) countdownLabelEl.textContent = cardTomorrowRestLabel;
+        if (countdownValue) countdownValue.textContent = cardTomorrowRestHighlight;
+        if (progressBar) progressBar.style.setProperty('--progress', '0%');
+        card.classList.remove('active');
+        card.classList.add('rest-day');
+        card.classList.remove('hidden');
+        return true;
+    }
+
+    return false;
+}
+
 function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEnd, ctx) {
     const card = document.getElementById('currentCard');
     if (!card) return;
@@ -1400,6 +1471,28 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
     if (skeleton) skeleton.classList.add('hidden');
     const count = data.length;
     if (!count) {
+        // Handle empty schedule: check if we should show tomorrow preview
+        if (ctx.mode === 'today') {
+            const now = new Date();
+            const { hours } = getTimezoneTimeParts(now);
+            let shouldShowTomorrow = false;
+
+            // Case 1: Rest day or no schedule type - show tomorrow preview after 17:00 (5 PM)
+            if (ctx.type === null || ctx.type === 'rest') {
+                shouldShowTomorrow = hours >= 17;
+            }
+            // Case 2: Special day with no schedule - show tomorrow preview after 21:00 (9 PM)
+            else if (ctx.type === 'special') {
+                shouldShowTomorrow = hours >= 21;
+            }
+
+            if (shouldShowTomorrow) {
+                const tomorrowInfo = getTomorrowPreview(ctx);
+                if (tomorrowInfo && renderTomorrowPreview(card, tomorrowInfo)) {
+                    return;
+                }
+            }
+        }
         card.classList.add('hidden');
         return;
     }
@@ -1427,60 +1520,8 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
     } else if (isAfterEnd) {
         if (ctx.mode === 'today') {
             const tomorrowInfo = getTomorrowPreview(ctx);
-            if (tomorrowInfo) {
-                if (tomorrowInfo.state === 'ready' && tomorrowInfo.firstItem) {
-                    const schedulePrefix = tomorrowInfo.displayName ? `${tomorrowInfo.displayName} · ` : '';
-                    if (statusEl) statusEl.textContent = statusTomorrowText;
-                    if (typeEl) typeEl.textContent = kindLabel(tomorrowInfo.firstItem.kind);
-                    if (titleEl) titleEl.textContent = `${cardTomorrowPrefix}${schedulePrefix}${tomorrowInfo.firstItem.name || ''}`;
-                    if (timeRange) timeRange.textContent = tomorrowInfo.firstItem._rangeLabel || '';
-                    if (countdownLabelEl) countdownLabelEl.textContent = cardTomorrowStartLabel;
-                    if (countdownValue) countdownValue.textContent = tomorrowInfo.firstItem._startLabel || countdownPlaceholder;
-                    if (progressBar) progressBar.style.setProperty('--progress', '0%');
-                    card.classList.remove('active');
-                    card.classList.add('upcoming');
-                    card.classList.remove('hidden');
-                    return;
-                }
-                if (tomorrowInfo.state === 'loading') {
-                    if (statusEl) statusEl.textContent = statusTomorrowText;
-                    if (typeEl) typeEl.textContent = tomorrowInfo.displayName || cardLoadingTypeText;
-                    if (titleEl) titleEl.textContent = cardLoadingTitleText;
-                    if (timeRange) timeRange.textContent = '';
-                    if (countdownLabelEl) countdownLabelEl.textContent = cardLoadingCountdownLabelText;
-                    if (countdownValue) countdownValue.textContent = countdownPlaceholder;
-                    if (progressBar) progressBar.style.setProperty('--progress', '0%');
-                    card.classList.remove('active');
-                    card.classList.add('upcoming');
-                    card.classList.remove('hidden');
-                    return;
-                }
-                if (tomorrowInfo.state === 'error') {
-                    if (statusEl) statusEl.textContent = statusTomorrowText;
-                    if (typeEl) typeEl.textContent = tomorrowInfo.displayName || cardErrorTypeText;
-                    if (titleEl) titleEl.textContent = scheduleErrorTitle;
-                    if (timeRange) timeRange.textContent = scheduleErrorSubtitle;
-                    if (countdownLabelEl) countdownLabelEl.textContent = '';
-                    if (countdownValue) countdownValue.textContent = countdownPlaceholder;
-                    if (progressBar) progressBar.style.setProperty('--progress', '0%');
-                    card.classList.remove('active');
-                    card.classList.add('upcoming');
-                    card.classList.remove('hidden');
-                    return;
-                }
-                if (tomorrowInfo.state === 'rest') {
-                    if (statusEl) statusEl.textContent = statusTomorrowRestText;
-                    if (typeEl) typeEl.textContent = cardTomorrowRestTypeText;
-                    if (titleEl) titleEl.textContent = cardTomorrowRestTitle;
-                    if (timeRange) timeRange.textContent = cardTomorrowRestSubtitle;
-                    if (countdownLabelEl) countdownLabelEl.textContent = cardTomorrowRestLabel;
-                    if (countdownValue) countdownValue.textContent = cardTomorrowRestHighlight;
-                    if (progressBar) progressBar.style.setProperty('--progress', '0%');
-                    card.classList.remove('active');
-                    card.classList.add('rest-day');
-                    card.classList.remove('hidden');
-                    return;
-                }
+            if (tomorrowInfo && renderTomorrowPreview(card, tomorrowInfo)) {
+                return;
             }
         }
         if (statusEl) statusEl.textContent = isSpecialDay ? statusSpecialText : ctx.mode === 'preview' ? statusCompletedPreviewText : statusCompletedTodayText;
