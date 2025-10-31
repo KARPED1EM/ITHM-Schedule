@@ -1200,8 +1200,9 @@ function updateTimeline() {
     }
     const hasSchedule = Array.isArray(raw) && raw.length > 0;
     if (!hasSchedule) {
-        if (ctx.type === 'special') {
-            const displayName = ctx.name || scheduleName('special');
+        if (ctx.type) {
+            // Has schedule type (special or regular) but no timetable - treat as special arrangement
+            const displayName = ctx.name || scheduleName(ctx.type);
             if (emptyMessage) {
                 const heading = ctx.mode === 'preview' ? `${scheduleTitlePreviewPrefix}${displayName}` : `${scheduleTitleSpecialTodayPrefix}${displayName}${scheduleTitleSpecialTodaySuffix}`;
                 const subtitle = `${specialEmptyTitle}${specialEmptySubtitle ? '：' : ''}${specialEmptySubtitle}`;
@@ -1210,6 +1211,7 @@ function updateTimeline() {
             }
             if (timeNotice) timeNotice.textContent = ctx.mode === 'preview' ? specialNoticePreview : specialNoticeToday;
         } else {
+            // No schedule type - rest day or no arrangement
             if (emptyMessage) {
                 const heading = ctx.mode === 'preview' ? emptyPreviewTitle : emptyTodayTitle;
                 const subtitle = ctx.mode === 'preview' ? emptyPreviewSubtitle : emptyTodaySubtitle;
@@ -1481,8 +1483,8 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
             if (ctx.type === null || ctx.type === 'rest') {
                 shouldShowTomorrow = hours >= 17;
             }
-            // Case 2: Special day with no schedule - show tomorrow preview after 21:00 (9 PM)
-            else if (ctx.type === 'special') {
+            // Case 2: Has schedule type (special or regular) but no timetable - show tomorrow preview after 21:00 (9 PM)
+            else if (ctx.type) {
                 shouldShowTomorrow = hours >= 21;
             }
 
