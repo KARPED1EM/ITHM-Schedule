@@ -1557,7 +1557,7 @@ function updateCurrentCard(data, currentIndex, isInGap, isBeforeStart, isAfterEn
     } else if (nextItem) {
         if (statusEl) statusEl.textContent = statusText;
         if (typeEl) typeEl.textContent = kindLabel(nextItem.kind);
-        if (titleEl) titleEl.textContent = (isSpecialDay ? cardSpecialPrefix : '') + cardNextPrefix + (nextItem.name || '');
+        if (titleEl) titleEl.textContent = cardNextPrefix + (nextItem.name || '');
         if (timeRange) timeRange.textContent = nextItem._rangeLabel || '';
         if (progressBar) progressBar.style.setProperty('--progress', '0%');
         card.classList.remove('active');
