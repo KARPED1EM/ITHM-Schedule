@@ -1,0 +1,8 @@
+[
+    { "name": "项目施工", "start": "08:25", "end": "12:30", "kind": "class", "period": "morning" },
+    { "name": "项目施工", "start": "14:25", "end": "18:30", "kind": "class", "period": "afternoon" },
+    { "name": "晚自习（第一节）", "start": "19:30", "end": "20:20", "kind": "self", "period": "evening" },
+    { "name": "晚自习（第二节）", "start": "20:30", "end": "21:30", "kind": "self", "period": "evening" },
+    { "name": "打扫卫生", "start": "21:30", "end": "21:45", "kind": "duty", "period": "evening" },
+    { "name": "离校", "start": "21:45", "end": "22:00", "kind": "leave", "period": "evening" }
+]
