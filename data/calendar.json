@@ -40,5 +40,13 @@
     "2025-11-06": { "type": "data-mining" },
     "2025-11-07": { "type": "special", "name": "ML项目实战", "scheduleKey": "ml-project-day1" },
     "2025-11-08": { "type": "special", "name": "ML项目实战", "scheduleKey": "ml-project-day2" },
-    "2025-11-10": { "type": "self-study" }
+    "2025-11-10": { "type": "self-study" },
+    "2025-11-11": { "type": "deep-learning" },
+    "2025-11-12": { "type": "deep-learning" },
+    "2025-11-14": { "type": "deep-learning" },
+    "2025-11-15": { "type": "deep-learning" },
+    "2025-11-17": { "type": "deep-learning" },
+    "2025-11-18": { "type": "deep-learning" },
+    "2025-11-19": { "type": "self-study" },
+    "2025-11-20": { "type": "deep-learning" }
 }
