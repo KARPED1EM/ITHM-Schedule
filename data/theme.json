@@ -61,6 +61,13 @@
                 "border": "rgba(34, 197, 94, 0.38)",
                 "optionAccent": "#22c55e"
             },
+            "deep-learning": {
+                "background": "linear-gradient(135deg, rgba(99, 102, 241, 0.16) 0%, rgba(79, 70, 229, 0.28) 100%)",
+                "text": "#eef2ff",
+                "subtext": "#c7d2fe",
+                "border": "rgba(79, 70, 229, 0.42)",
+                "optionAccent": "#4f46e5"
+            },
             "special": {
                 "background": "linear-gradient(135deg, rgba(240, 91, 163, 0.14) 0%, rgba(236, 72, 153, 0.26) 100%)",
                 "text": "#ffe7f2",
