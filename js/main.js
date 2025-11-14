@@ -133,6 +133,7 @@ const scheduleDir = pathConfig.scheduleDir || 'data/schedule';
 const scheduleExtension = typeof pathConfig.scheduleExtension === 'string' ? pathConfig.scheduleExtension : '.json';
 const specialScheduleDir = pathConfig.specialScheduleDir || 'data/special-schedule';
 const specialScheduleExtension = typeof pathConfig.specialScheduleExtension === 'string' ? pathConfig.specialScheduleExtension : '.json';
+const scheduleOverridesUrl = pathConfig.scheduleOverrides || 'data/schedule-overrides.json';
 
 const scheduleOverrideKey = 'scheduleOverride';
 const scheduleOverrideDateKey = 'scheduleOverrideDate';
@@ -158,6 +159,7 @@ const scheduleErrors = {};
 const specialScheduleCache = {};
 const specialScheduleRequests = {};
 const specialScheduleErrors = {};
+let scheduleOverridesData = null;
 
 const defaultTypeStyle = Object.freeze({
     background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.14) 100%)',
@@ -863,6 +865,56 @@ async function loadCalendar() {
     calendarData = await fetchJson(calendarUrl);
 }
 
+async function loadScheduleOverrides() {
+    try {
+        scheduleOverridesData = await fetchJson(scheduleOverridesUrl);
+        console.log('Schedule overrides loaded successfully');
+    } catch (error) {
+        console.warn('Schedule overrides not found or failed to load, continuing without overrides:', error);
+        scheduleOverridesData = null;
+    }
+}
+
+function applyScheduleOverrides(scheduleArr, dateStr, scheduleType) {
+    if (!scheduleArr || !Array.isArray(scheduleArr)) return scheduleArr;
+    if (!scheduleOverridesData || typeof scheduleOverridesData !== 'object') return scheduleArr;
+
+    const override = scheduleOverridesData[dateStr];
+    if (!override) return scheduleArr;
+
+    // Check if this override applies to the current schedule type
+    if (override.baseSchedule && override.baseSchedule !== scheduleType) {
+        return scheduleArr;
+    }
+
+    // Apply overrides if they exist
+    if (!Array.isArray(override.overrides) || override.overrides.length === 0) {
+        return scheduleArr;
+    }
+
+    // Create a deep copy of the schedule array to avoid mutating the cached data
+    const modifiedSchedule = scheduleArr.map(item => ({ ...item }));
+
+    // Apply each override
+    override.overrides.forEach(overrideItem => {
+        const index = overrideItem.index;
+        if (typeof index !== 'number' || index < 0 || index >= modifiedSchedule.length) {
+            console.warn(`Invalid override index ${index} for date ${dateStr}`);
+            return;
+        }
+
+        // Apply all fields from the override to the target item
+        const targetItem = modifiedSchedule[index];
+        Object.keys(overrideItem).forEach(key => {
+            if (key !== 'index') {
+                targetItem[key] = overrideItem[key];
+            }
+        });
+    });
+
+    return modifiedSchedule;
+}
+
 const loadSchedule = createCachedJsonLoader({
     cache: scheduleCache,
     requests: scheduleRequests,
@@ -947,6 +999,8 @@ function getRenderContext() {
                 type = day.type;
                 name = scheduleName(type);
                 scheduleArr = scheduleCache[type] || null;
+                // Apply schedule overrides for preset schedules
+                scheduleArr = applyScheduleOverrides(scheduleArr, dateStr, type);
             }
         }
         return { mode: 'preview', dateStr, dateUtc, type, name, scheduleArr, scheduleKey };
@@ -967,13 +1021,17 @@ function getRenderContext() {
             scheduleKey
         };
     }
+    // Apply schedule overrides for today's preset schedule
+    let todayScheduleArr = currentScheduleType ? scheduleCache[currentScheduleType] || null : null;
+    todayScheduleArr = applyScheduleOverrides(todayScheduleArr, dateStr, currentScheduleType);
+
     return {
         mode: 'today',
         dateStr,
         dateUtc,
         type: currentScheduleType,
         name: currentScheduleType ? scheduleName(currentScheduleType) : null,
-        scheduleArr: currentScheduleType ? scheduleCache[currentScheduleType] || null : null,
+        scheduleArr: todayScheduleArr,
         scheduleKey: null
     };
 }
@@ -2036,6 +2094,7 @@ async function loadData() {
     try {
         toggleLoading(true);
         await loadCalendar();
+        await loadScheduleOverrides();
         determineCurrentSchedule();
         if (currentScheduleType && currentScheduleType !== 'special') {
             await loadSchedule(currentScheduleType);

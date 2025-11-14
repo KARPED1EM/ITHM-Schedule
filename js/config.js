@@ -9,6 +9,7 @@ window.SCHEDULE_CONFIG = {
         scheduleExtension: '.json',
         specialScheduleDir: 'data/special-schedule',
         specialScheduleExtension: '.json',
+        scheduleOverrides: 'data/schedule-overrides.json',
         theme: 'data/theme.json'
     },
     defaults: {
