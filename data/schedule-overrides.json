@@ -1,25 +1,10 @@
 {
-  "_comment": "日程覆盖配置文件 - Schedule Overrides Configuration",
-  "_description": "用于临时修改特定日期的预设日程，而不影响原始日程文件",
-  "_usage": {
-    "dateKey": {
-      "baseSchedule": "预设日程类型 (entry, advanced, deep-learning等)",
-      "comment": "可选的说明注释",
-      "overrides": [
-        {
-          "index": "要修改的项目索引（从0开始）",
-          "field": "要覆盖的字段值（name, start, end, kind等）"
-        }
-      ]
-    }
-  },
-
   "2025-11-17": {
     "baseSchedule": "deep-learning",
-    "comment": "将下午的演讲改为点名，时间从14:10-14:25改为14:25-14:30",
+    "comment": "这天不用演讲，按照自习日时间上课",
     "overrides": [
       {
-        "index": 6,
+        "index": 5,
         "name": "点名",
         "start": "14:25",
         "end": "14:30"
@@ -29,10 +14,10 @@
 
   "2025-11-18": {
     "baseSchedule": "deep-learning",
-    "comment": "将下午的演讲改为点名，时间从14:10-14:25改为14:25-14:30",
+    "comment": "这天不用演讲，按照自习日时间上课",
     "overrides": [
       {
-        "index": 6,
+        "index": 5,
         "name": "点名",
         "start": "14:25",
         "end": "14:30"
