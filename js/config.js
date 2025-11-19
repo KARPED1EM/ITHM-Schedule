@@ -27,6 +27,7 @@ window.SCHEDULE_CONFIG = {
         'ml-basics': { name: '机器学习基础', emoji: '🤖' },
         'data-mining': { name: '数据挖掘实战', emoji: '⛏️' },
         'deep-learning': { name: '深度学习', emoji: '🧠' },
+        'nlp-basic': { name: 'NLP基础', emoji: '💬' },
         special: { name: '特殊安排', emoji: '⭐' }
     },
     kinds: {
@@ -55,7 +56,7 @@ window.SCHEDULE_CONFIG = {
         daysBefore: 15,
         daysAfter: 15,
         labels: { today: '今日', rest: '休息' },
-        typeLabels: { entry: '开发入门', advanced: '开发进阶', 'data-stats': '数据统计', 'self-study': '自习', 'ml-basics': '机器学习', 'data-mining': '数据挖掘', 'deep-learning': '深度学习', special: '特殊' }
+        typeLabels: { entry: '开发入门', advanced: '开发进阶', 'data-stats': '数据统计', 'self-study': '自习', 'ml-basics': '机器学习', 'data-mining': '数据挖掘', 'deep-learning': '深度学习', 'nlp-basic': 'NLP基础', special: '特殊' }
     },
     timeline: {
         gapLabel: '休息'
@@ -159,6 +160,6 @@ window.SCHEDULE_CONFIG = {
     switcher: {
         buttonDefault: '切换课表',
         buttonPreview: '退出预览',
-        types: ['entry', 'advanced', 'data-stats', 'ml-basics', 'data-mining', 'deep-learning', 'self-study']
+        types: ['entry', 'advanced', 'data-stats', 'ml-basics', 'data-mining', 'deep-learning', 'nlp-basic', 'self-study']
     }
 };

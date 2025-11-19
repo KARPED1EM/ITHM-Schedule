@@ -68,6 +68,13 @@
                 "border": "rgba(79, 70, 229, 0.42)",
                 "optionAccent": "#4f46e5"
             },
+            "nlp-basic": {
+                "background": "linear-gradient(135deg, rgba(6, 182, 212, 0.16) 0%, rgba(14, 165, 233, 0.28) 100%)",
+                "text": "#ecfeff",
+                "subtext": "#a5f3fc",
+                "border": "rgba(14, 165, 233, 0.42)",
+                "optionAccent": "#0ea5e9"
+            },
             "special": {
                 "background": "linear-gradient(135deg, rgba(240, 91, 163, 0.14) 0%, rgba(236, 72, 153, 0.26) 100%)",
                 "text": "#ffe7f2",
