@@ -48,5 +48,11 @@
     "2025-11-17": { "type": "deep-learning" },
     "2025-11-18": { "type": "deep-learning" },
     "2025-11-19": { "type": "self-study" },
-    "2025-11-20": { "type": "deep-learning" }
+    "2025-11-20": { "type": "deep-learning" },
+    "2025-11-22": { "type": "nlp-basic" },
+    "2025-11-23": { "type": "nlp-basic" },
+    "2025-11-25": { "type": "nlp-basic" },
+    "2025-11-26": { "type": "nlp-basic" },
+    "2025-11-27": { "type": "self-study" },
+    "2025-11-28": { "type": "nlp-basic" }
 }
