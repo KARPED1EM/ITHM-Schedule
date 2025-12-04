@@ -60,5 +60,13 @@
     "2025-12-02": { "type": "nlp-basic" },
     "2025-12-03": { "type": "self-study" },
     "2025-12-04": { "type": "nlp-basic" },
-    "2025-12-05": { "type": "nlp-basic" }
+    "2025-12-05": { "type": "nlp-basic" },
+    "2025-12-07": { "type": "text-classification" },
+    "2025-12-08": { "type": "text-classification" },
+    "2025-12-09": { "type": "self-study" },
+    "2025-12-10": { "type": "text-classification" },
+    "2025-12-11": { "type": "text-classification" },
+    "2025-12-12": { "type": "text-classification" },
+    "2025-12-14": { "type": "text-classification" },
+    "2025-12-15": { "type": "text-classification" }
 }
