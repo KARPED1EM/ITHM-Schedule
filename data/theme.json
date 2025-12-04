@@ -75,6 +75,13 @@
                 "border": "rgba(14, 165, 233, 0.42)",
                 "optionAccent": "#0ea5e9"
             },
+            "text-classification": {
+                "background": "linear-gradient(135deg, rgba(244, 63, 94, 0.16) 0%, rgba(225, 29, 72, 0.28) 100%)",
+                "text": "#fff1f2",
+                "subtext": "#fecdd3",
+                "border": "rgba(225, 29, 72, 0.42)",
+                "optionAccent": "#e11d48"
+            },
             "special": {
                 "background": "linear-gradient(135deg, rgba(240, 91, 163, 0.14) 0%, rgba(236, 72, 153, 0.26) 100%)",
                 "text": "#ffe7f2",
