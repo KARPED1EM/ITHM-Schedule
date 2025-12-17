@@ -912,7 +912,10 @@ function applyScheduleOverrides(scheduleArr, dateStr, scheduleType) {
         });
     });
 
-    return modifiedSchedule;
+    // Filter out items marked as hidden
+    const filteredSchedule = modifiedSchedule.filter(item => !item.hidden);
+
+    return filteredSchedule;
 }
 
 const loadSchedule = createCachedJsonLoader({
